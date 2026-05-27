@@ -1,12 +1,6 @@
 name: Build Codex CLI Worker
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "codex-cli-worker/**"
-      - ".github/workflows/build.yaml"
   release:
     types:
       - published

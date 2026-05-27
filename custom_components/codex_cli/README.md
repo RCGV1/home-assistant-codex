@@ -4,6 +4,8 @@ Codex connects Home Assistant to the local Codex CLI Worker add-on. It lets Home
 
 ## Installation
 
+Use the My Home Assistant buttons in the repository README for the fastest setup.
+
 1. Add `https://github.com/moryoav/home-assistant-codex` as a Home Assistant app repository.
 2. Install and start the Codex CLI Worker app.
 3. Install this integration with HACS as a custom integration, or copy `custom_components/codex_cli` into `/config/custom_components/codex_cli`.
@@ -12,7 +14,7 @@ Codex connects Home Assistant to the local Codex CLI Worker add-on. It lets Home
 
 ## Configuration
 
-The integration auto-detects the installed Codex CLI Worker app through the local Supervisor API. It also reads the worker's generated API token from the app options, keeps it in memory, and stores only the non-secret worker URL in the Home Assistant config entry.
+The integration auto-detects the installed Codex CLI Worker app through the local Supervisor API. It also bootstraps the worker's private API token with Home Assistant Core's Supervisor token, keeps the worker token in memory, and stores only the non-secret worker URL in the Home Assistant config entry.
 
 There is no worker URL or API token to enter.
 

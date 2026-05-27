@@ -44,7 +44,19 @@ Prebuilt app images are published for:
 
 ## Installation
 
-### 1. Add This App Repository
+### Quick Install
+
+Use these buttons to jump directly into the relevant Home Assistant pages:
+
+[![Add the Codex app repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmoryoav%2Fhome-assistant-codex)
+
+[![Open the Codex CLI Worker app page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=8a8d906b_codex_cli_worker&repository_url=https%3A%2F%2Fgithub.com%2Fmoryoav%2Fhome-assistant-codex)
+
+[![Open the Codex HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moryoav&repository=home-assistant-codex&category=integration)
+
+[![Add the Codex integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=codex_cli)
+
+### 1. Install the Worker App
 
 In Home Assistant:
 
@@ -62,10 +74,10 @@ Then install **Codex CLI Worker** from the Apps store.
 ### 2. Start the Worker App
 
 1. Open **Codex CLI Worker**.
-2. Leave `api_token` empty on first start if you want the app to generate a strong random token.
+2. Review the app options.
 3. Start the app.
 
-The generated token protects the worker API. The **Codex** integration reads it automatically through Home Assistant's local Supervisor API, so you do not need to copy it into the integration.
+The app generates an internal worker API token in private app storage on first start. The **Codex** integration retrieves it automatically through a local Supervisor-authenticated bootstrap request, so you do not need to view, copy, or configure a token.
 
 The app's web UI is available through Home Assistant Ingress. Do not try to open port `9123` directly; it is intentionally not exposed.
 
@@ -131,7 +143,7 @@ In Home Assistant:
 1. Go to **Settings** -> **Devices & services**.
 2. Add integration **Codex**.
 
-The integration auto-detects the installed worker app and its generated worker API token. There is no worker URL or API token to enter.
+The integration auto-detects the installed worker app and bootstraps its internal worker API token. There is no worker URL or API token to enter.
 
 ## Actions
 

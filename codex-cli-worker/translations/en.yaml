@@ -1,7 +1,4 @@
 configuration:
-  api_token:
-    name: API token
-    description: Leave empty on first start to let the app generate a random token and store it here. This token protects the worker HTTP API; the Home Assistant Codex integration detects it automatically.
   codex_model:
     name: Codex model
     description: Model passed to codex exec. Use default to let Codex CLI choose its bundled default. GPT-5.3-Codex is the current recommended coding model.

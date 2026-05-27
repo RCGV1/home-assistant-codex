@@ -9,6 +9,7 @@ import json
 import os
 import queue
 import re
+import secrets
 import shutil
 import signal
 import subprocess
@@ -32,12 +33,12 @@ CONFIG_ROOT = Path("/config")
 DATA_ROOT = Path("/data")
 CODEX_HOME = DATA_ROOT / "codex-home"
 OPTIONS_PATH = DATA_ROOT / "options.json"
+WORKER_TOKEN_PATH = DATA_ROOT / "worker_api_token"
 SCHEMA_PATH = DATA_ROOT / "codex-output-schema.json"
 CODEX_CONFIG_PATH = CODEX_HOME / "config.toml"
 TASK_STATE_FILE = DATA_ROOT / "task_index.json"
 
 DEFAULT_OPTIONS = {
-    "api_token": "",
     "codex_model": "gpt-5.3-codex",
     "codex_sandbox": "workspace-write",
     "task_root": "/config/codex_tasks",
@@ -105,6 +106,7 @@ running_processes: dict[str, subprocess.Popen] = {}
 auth_state: dict[str, Any] = {}
 auth_process: subprocess.Popen | None = None
 event_queue: "queue.Queue[tuple[str, str]]" = queue.Queue()
+addon_slug_cache: str | None = None
 
 
 @app.before_request
@@ -163,13 +165,22 @@ def task_root() -> Path:
 
 
 def api_token() -> str:
-    return str(read_options().get("api_token") or os.environ.get("CODEX_WORKER_TOKEN") or "")
+    if WORKER_TOKEN_PATH.exists():
+        try:
+            return WORKER_TOKEN_PATH.read_text(encoding="utf-8").strip()
+        except Exception as exc:
+            print(f"Could not read worker API token: {exc}", flush=True)
+    return str(os.environ.get("CODEX_WORKER_TOKEN") or "")
 
 
 def ensure_runtime_files() -> None:
     CODEX_HOME.mkdir(parents=True, exist_ok=True)
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
     task_root().mkdir(parents=True, exist_ok=True)
     AUTH_QR_DIR.mkdir(parents=True, exist_ok=True)
+    if not api_token():
+        WORKER_TOKEN_PATH.write_text(secrets.token_urlsafe(32), encoding="utf-8")
+        WORKER_TOKEN_PATH.chmod(0o600)
     schema = {
         "type": "object",
         "additionalProperties": False,
@@ -291,6 +302,63 @@ def require_auth(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def supervisor_token_from_request() -> str:
+    """Return a Supervisor token supplied for bootstrap authentication."""
+    auth = request.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return request.headers.get("X-Supervisor-Token", "").strip()
+
+
+def own_addon_slug() -> str:
+    """Return this app's Supervisor slug."""
+    global addon_slug_cache
+    if addon_slug_cache:
+        return addon_slug_cache
+
+    token = os.environ.get("SUPERVISOR_TOKEN", "")
+    if not token:
+        return "self"
+    try:
+        response = requests.get(
+            "http://supervisor/addons/self/info",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        data = payload.get("data", payload) if isinstance(payload, dict) else {}
+        slug = str(data.get("slug") or "")
+        if slug:
+            addon_slug_cache = slug
+            return slug
+    except (requests.RequestException, ValueError) as exc:
+        print(f"Could not resolve own add-on slug: {exc}", flush=True)
+    return "self"
+
+
+def supervisor_token_is_homeassistant(token: str) -> bool:
+    """Validate that the supplied Supervisor token belongs to Home Assistant Core."""
+    if not token:
+        return False
+    addon_slug = own_addon_slug()
+    try:
+        response = requests.post(
+            f"http://supervisor/addons/{addon_slug}/sys_options",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={},
+            timeout=10,
+        )
+    except requests.RequestException as exc:
+        print(f"Could not validate Supervisor token for bootstrap: {exc}", flush=True)
+        return False
+
+    # The endpoint is only callable by Home Assistant. An empty payload should fail
+    # validation with 400 after authorization, while other Supervisor clients receive
+    # 401/403 before payload validation.
+    return response.status_code == 400
 
 
 def is_ingress_request() -> bool:
@@ -1072,7 +1140,7 @@ def index() -> Response:
 <main>
   <h1>Codex CLI Worker</h1>
   <section>
-    <p>API token configured: <strong>{str(token_configured).lower()}</strong></p>
+    <p>Worker API authentication: <strong>{"enabled" if token_configured else "not ready"}</strong></p>
     <p>Codex auth file: <strong>{str(status.get("has_auth_file")).lower()}</strong></p>
     <p>Codex login status: <strong>{str(status.get("status_ok")).lower()}</strong></p>
     <p><code>{status.get("message", "")}</code></p>
@@ -1174,6 +1242,17 @@ def health() -> Response:
             "task_root": str(task_root()),
         }
     )
+
+
+@app.post("/auth/bootstrap")
+def bootstrap_auth() -> Response:
+    if not supervisor_token_is_homeassistant(supervisor_token_from_request()):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    token = api_token()
+    if not token:
+        return jsonify({"ok": False, "error": "worker API token is not ready"}), 503
+    return jsonify({"ok": True, "api_token": token})
 
 
 @app.get("/status")

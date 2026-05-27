@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.15
+
+- Moved the worker API token from user-visible app options into private app storage.
+- Added secure token bootstrap for the Home Assistant Codex integration.
+- Removed duplicate image builds on normal pushes; GHCR images now publish on releases or manual workflow runs.
+
 ## 0.1.14
 
 - Advertise the worker app through Supervisor discovery for the Codex integration.
