@@ -14,7 +14,7 @@ Use the My Home Assistant buttons in the repository README for the fastest setup
 
 ## Configuration
 
-The integration auto-detects the installed Codex CLI Worker app through the local Supervisor API. It also bootstraps the worker's private API token with Home Assistant Core's Supervisor token, keeps the worker token in memory, and stores only the non-secret worker URL in the Home Assistant config entry.
+The integration auto-detects the installed Codex CLI Worker app through the local Supervisor API. It also provisions the worker's private API token through Supervisor-managed app stdin, keeps the worker token in memory, and stores only the non-secret worker URL in the Home Assistant config entry.
 
 There is no worker URL or API token to enter.
 

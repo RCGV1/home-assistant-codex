@@ -63,7 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Codex CLI from a config entry."""
     session = async_get_clientsession(hass)
     try:
-        worker = await async_discover_worker(session)
+        worker = await async_discover_worker(hass, session)
     except CodexCliApiError as exc:
         raise ConfigEntryNotReady(str(exc)) from exc
 

@@ -12,6 +12,7 @@ import re
 import secrets
 import shutil
 import signal
+import sys
 import subprocess
 import tarfile
 import threading
@@ -106,7 +107,6 @@ running_processes: dict[str, subprocess.Popen] = {}
 auth_state: dict[str, Any] = {}
 auth_process: subprocess.Popen | None = None
 event_queue: "queue.Queue[tuple[str, str]]" = queue.Queue()
-addon_slug_cache: str | None = None
 
 
 @app.before_request
@@ -173,14 +173,22 @@ def api_token() -> str:
     return str(os.environ.get("CODEX_WORKER_TOKEN") or "")
 
 
+def set_api_token(token: str) -> bool:
+    """Store the worker API token in private app storage."""
+    if len(token) < 32:
+        return False
+    WORKER_TOKEN_PATH.write_text(token, encoding="utf-8")
+    WORKER_TOKEN_PATH.chmod(0o600)
+    return True
+
+
 def ensure_runtime_files() -> None:
     CODEX_HOME.mkdir(parents=True, exist_ok=True)
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
     task_root().mkdir(parents=True, exist_ok=True)
     AUTH_QR_DIR.mkdir(parents=True, exist_ok=True)
     if not api_token():
-        WORKER_TOKEN_PATH.write_text(secrets.token_urlsafe(32), encoding="utf-8")
-        WORKER_TOKEN_PATH.chmod(0o600)
+        set_api_token(secrets.token_urlsafe(32))
     schema = {
         "type": "object",
         "additionalProperties": False,
@@ -304,69 +312,35 @@ def require_auth(func):
     return wrapper
 
 
-def supervisor_token_from_request() -> str:
-    """Return a Supervisor token supplied for bootstrap authentication."""
-    auth = request.headers.get("Authorization", "")
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
-    return request.headers.get("X-Supervisor-Token", "").strip()
-
-
-def own_addon_slug() -> str:
-    """Return this app's Supervisor slug."""
-    global addon_slug_cache
-    if addon_slug_cache:
-        return addon_slug_cache
-
-    token = os.environ.get("SUPERVISOR_TOKEN", "")
-    if not token:
-        return "self"
-    try:
-        response = requests.get(
-            "http://supervisor/addons/self/info",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        data = payload.get("data", payload) if isinstance(payload, dict) else {}
-        slug = str(data.get("slug") or "")
-        if slug:
-            addon_slug_cache = slug
-            return slug
-    except (requests.RequestException, ValueError) as exc:
-        print(f"Could not resolve own add-on slug: {exc}", flush=True)
-    return "self"
-
-
-def supervisor_token_is_homeassistant(token: str) -> bool:
-    """Validate that the supplied Supervisor token belongs to Home Assistant Core."""
-    if not token:
-        return False
-    addon_slug = own_addon_slug()
-    try:
-        response = requests.post(
-            f"http://supervisor/addons/{addon_slug}/sys_options",
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json={},
-            timeout=10,
-        )
-    except requests.RequestException as exc:
-        print(f"Could not validate Supervisor token for bootstrap: {exc}", flush=True)
-        return False
-
-    # The endpoint is only callable by Home Assistant. An empty payload should fail
-    # validation with 400 after authorization, while other Supervisor clients receive
-    # 401/403 before payload validation.
-    return response.status_code == 400
-
-
 def is_ingress_request() -> bool:
     """Return true for requests proxied through Home Assistant Ingress."""
     if not request.headers.get("X-Ingress-Path"):
         return False
     remote_addr = request.remote_addr or ""
     return remote_addr == INGRESS_PROXY_IP
+
+
+def handle_stdin_message(message: dict[str, Any]) -> None:
+    """Handle Supervisor-managed control messages from Home Assistant."""
+    command = str(message.get("command") or "")
+    if command == "set_api_token":
+        token = str(message.get("token") or "")
+        if set_api_token(token):
+            print("Updated worker API token from Home Assistant.", flush=True)
+        else:
+            print("Rejected invalid worker API token from Home Assistant.", flush=True)
+
+
+def stdin_reader() -> None:
+    """Read Supervisor app_stdin messages."""
+    for line in sys.stdin:
+        try:
+            payload = json.loads(line)
+        except ValueError:
+            print("Ignored non-JSON stdin message.", flush=True)
+            continue
+        if isinstance(payload, dict):
+            handle_stdin_message(payload)
 
 
 def active_task_id() -> str | None:
@@ -1244,17 +1218,6 @@ def health() -> Response:
     )
 
 
-@app.post("/auth/bootstrap")
-def bootstrap_auth() -> Response:
-    if not supervisor_token_is_homeassistant(supervisor_token_from_request()):
-        return jsonify({"ok": False, "error": "unauthorized"}), 401
-
-    token = api_token()
-    if not token:
-        return jsonify({"ok": False, "error": "worker API token is not ready"}), 503
-    return jsonify({"ok": True, "api_token": token})
-
-
 @app.get("/status")
 @require_auth
 def status() -> Response:
@@ -1392,6 +1355,7 @@ def main() -> None:
     ensure_runtime_files()
     load_task_index()
     auto_start_login_if_needed()
+    threading.Thread(target=stdin_reader, daemon=True).start()
     app.run(host="0.0.0.0", port=9123)
 
 

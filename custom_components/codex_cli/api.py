@@ -80,7 +80,7 @@ class CodexCliApiClient:
         json: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         headers = {}
-        if auth:
+        if auth and self._api_token:
             headers["Authorization"] = f"Bearer {self._api_token}"
         url = f"{self._base_url}{path}"
         try:

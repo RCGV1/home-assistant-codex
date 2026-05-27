@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import os
+import secrets
 from dataclasses import dataclass
 from typing import Any
 
-from aiohttp import ClientError, ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientSession
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from .api import CodexCliApiClient, CodexCliApiError, CodexCliAuthError
 from .const import WORKER_ADDON_NAME, WORKER_ADDON_SLUG
@@ -109,33 +112,26 @@ async def _async_worker_addons(session: ClientSession) -> list[dict[str, Any]]:
     return workers
 
 
-async def _async_bootstrap_worker_token(session: ClientSession, base_url: str) -> str:
-    """Ask the worker for its private API token using Home Assistant's Supervisor token."""
-    supervisor_token = _supervisor_token()
+async def _async_provision_worker_token(hass: HomeAssistant, addon_slug: str, api_token: str) -> None:
+    """Provision the worker API token through Supervisor-managed app stdin."""
     try:
-        async with session.post(
-            f"{base_url}/auth/bootstrap",
-            headers={"Authorization": f"Bearer {supervisor_token}"},
-            timeout=10,
-        ) as response:
-            response.raise_for_status()
-            payload = await response.json(content_type=None)
-    except ClientResponseError as exc:
-        if exc.status in (401, 403):
-            raise CodexCliAuthError("Worker bootstrap authentication failed") from exc
-        raise CodexCliApiError(f"Worker bootstrap returned HTTP {exc.status}") from exc
-    except (ClientError, TimeoutError, ValueError) as exc:
-        raise CodexCliApiError(f"Worker bootstrap failed: {exc}") from exc
-
-    if not isinstance(payload, dict):
-        raise CodexCliApiError("Worker bootstrap returned invalid JSON")
-    api_token = str(payload.get("api_token") or "")
-    if not api_token:
-        raise CodexCliApiError("Worker bootstrap did not return an API token")
-    return api_token
+        await hass.services.async_call(
+            "hassio",
+            "app_stdin",
+            {
+                "app": addon_slug,
+                "input": {
+                    "command": "set_api_token",
+                    "token": api_token,
+                },
+            },
+            blocking=True,
+        )
+    except HomeAssistantError as exc:
+        raise CodexCliApiError("Could not provision the Codex worker API token") from exc
 
 
-async def async_discover_worker(session: ClientSession) -> WorkerConnection:
+async def async_discover_worker(hass: HomeAssistant, session: ClientSession) -> WorkerConnection:
     """Find the reachable worker app and its generated API token."""
     workers = await _async_worker_addons(session)
     if not workers:
@@ -144,16 +140,13 @@ async def async_discover_worker(session: ClientSession) -> WorkerConnection:
     last_error: CodexCliApiError | None = None
     for addon in workers:
         options = addon.get("options") if isinstance(addon.get("options"), dict) else {}
+        addon_slug = str(addon.get("slug") or "")
+        api_token = str(options.get("api_token") or "")
+        if not api_token and addon_slug:
+            api_token = secrets.token_urlsafe(32)
+            await _async_provision_worker_token(hass, addon_slug, api_token)
 
         for base_url in _candidate_urls_from_addon(addon):
-            try:
-                api_token = await _async_bootstrap_worker_token(session, base_url)
-            except CodexCliApiError as exc:
-                api_token = str(options.get("api_token") or "")
-                if not api_token:
-                    last_error = exc
-                    continue
-
             client = CodexCliApiClient(session, base_url, api_token)
             try:
                 await client.status()

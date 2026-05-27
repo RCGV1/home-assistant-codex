@@ -77,7 +77,7 @@ Then install **Codex CLI Worker** from the Apps store.
 2. Review the app options.
 3. Start the app.
 
-The app generates an internal worker API token in private app storage on first start. The **Codex** integration retrieves it automatically through a local Supervisor-authenticated bootstrap request, so you do not need to view, copy, or configure a token.
+The app keeps an internal worker API token in private app storage. The **Codex** integration provisions and rotates that token automatically through Home Assistant's Supervisor-managed app stdin, so you do not need to view, copy, or configure a token.
 
 The app's web UI is available through Home Assistant Ingress. Do not try to open port `9123` directly; it is intentionally not exposed.
 
@@ -143,7 +143,7 @@ In Home Assistant:
 1. Go to **Settings** -> **Devices & services**.
 2. Add integration **Codex**.
 
-The integration auto-detects the installed worker app and bootstraps its internal worker API token. There is no worker URL or API token to enter.
+The integration auto-detects the installed worker app and provisions its internal worker API token. There is no worker URL or API token to enter.
 
 ## Actions
 

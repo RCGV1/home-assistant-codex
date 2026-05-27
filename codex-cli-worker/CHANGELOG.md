@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.16
+
+- Provision the internal worker API token through Supervisor-managed app stdin.
+- Keep the worker API token out of both the app configuration UI and the integration config entry.
+
 ## 0.1.15
 
 - Moved the worker API token from user-visible app options into private app storage.

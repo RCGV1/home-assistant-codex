@@ -14,13 +14,13 @@ Prebuilt images are published to `ghcr.io/moryoav/codex-cli-worker` for `amd64` 
 
 The web UI is intended to be opened only through Home Assistant Ingress. The app does not publish its HTTP port to the LAN by default, and the Flask server rejects spoofed Ingress requests unless they come from the Home Assistant Ingress proxy address.
 
-Programmatic API calls still require the internal worker API token unless they are proxied through authenticated Home Assistant Ingress. The Home Assistant Codex integration discovers the internal app hostname automatically through Supervisor metadata and bootstraps the worker token with Home Assistant Core's Supervisor token.
+Programmatic API calls still require the internal worker API token unless they are proxied through authenticated Home Assistant Ingress. The Home Assistant Codex integration discovers the internal app hostname automatically through Supervisor metadata and provisions the worker token through Supervisor-managed app stdin.
 
 The app does not request host networking, Docker API access, full access, host PID/UTS access, privileged kernel capabilities, or elevated Supervisor roles. It keeps AppArmor enabled and ships a custom `apparmor.txt` profile. The `/config` mount is intentionally read-write because editing Home Assistant configuration is the core purpose of the app.
 
 ## API Token
 
-The API token protects the worker HTTP API. The app generates a random token on first start, stores it in private app storage, and uses it immediately. The Home Assistant `Codex` integration retrieves it automatically through a local Supervisor-authenticated bootstrap request. You do not need to view, copy, or configure this token.
+The API token protects the worker HTTP API. The app stores it in private app storage. The Home Assistant `Codex` integration provisions and rotates it automatically through Supervisor-managed app stdin. You do not need to view, copy, or configure this token.
 
 The token is not your OpenAI or ChatGPT credential. Codex authentication is still handled separately with `codex login`.
 

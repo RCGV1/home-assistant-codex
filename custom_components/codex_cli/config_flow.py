@@ -20,7 +20,7 @@ def _schema() -> vol.Schema:
 
 async def _discover_input(hass: HomeAssistant) -> dict[str, Any]:
     """Discover and validate the local worker app."""
-    worker = await async_discover_worker(async_get_clientsession(hass))
+    worker = await async_discover_worker(hass, async_get_clientsession(hass))
     return {CONF_BASE_URL: worker.base_url}
 
 
