@@ -141,10 +141,11 @@ async def async_discover_worker(hass: HomeAssistant, session: ClientSession) -> 
     for addon in workers:
         options = addon.get("options") if isinstance(addon.get("options"), dict) else {}
         addon_slug = str(addon.get("slug") or "")
-        api_token = str(options.get("api_token") or "")
-        if not api_token and addon_slug:
+        if addon_slug:
             api_token = secrets.token_urlsafe(32)
             await _async_provision_worker_token(hass, addon_slug, api_token)
+        else:
+            api_token = str(options.get("api_token") or "")
 
         for base_url in _candidate_urls_from_addon(addon):
             client = CodexCliApiClient(session, base_url, api_token)

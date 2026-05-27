@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.17
+
+- Always provision a fresh in-memory worker API token from the integration instead of reusing stale legacy app option values.
+
 ## 0.1.16
 
 - Provision the internal worker API token through Supervisor-managed app stdin.
