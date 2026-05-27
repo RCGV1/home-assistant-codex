@@ -1,0 +1,45 @@
+#include <tunables/global>
+
+profile codex_cli_worker flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  file,
+  network,
+  signal (send) set=(kill,term,int,hup,cont),
+  signal (receive),
+
+  /init ix,
+  /run.sh rix,
+  /server.py r,
+
+  /bin/** rix,
+  /sbin/** rix,
+  /usr/bin/** rix,
+  /usr/sbin/** rix,
+  /usr/local/bin/** rix,
+
+  /lib/** mr,
+  /usr/lib/** mr,
+  /usr/local/lib/** mr,
+  /usr/share/** r,
+  /etc/** r,
+
+  /package/** rix,
+  /command/** rix,
+  /usr/lib/bashio/** rix,
+  /run/ r,
+  /run/** rwk,
+
+  /data/ rw,
+  /data/** rwk,
+  /config/ rw,
+  /config/** rwk,
+  /tmp/ rw,
+  /tmp/** rwk,
+
+  /proc/** r,
+  /dev/null rw,
+  /dev/random r,
+  /dev/tty rw,
+  /dev/urandom r,
+}

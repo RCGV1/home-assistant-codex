@@ -1,0 +1,6 @@
+{
+  "name": "Codex",
+  "render_readme": true,
+  "domains": ["codex_cli"],
+  "homeassistant": "2026.5.0"
+}

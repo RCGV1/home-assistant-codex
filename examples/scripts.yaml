@@ -1,0 +1,60 @@
+llm_run_codex_config_task:
+  alias: LLM Run Codex Config Task
+  description: Start a Codex task against the Home Assistant config folder.
+  mode: single
+  fields:
+    prompt:
+      name: Prompt
+      description: The Home Assistant change request, bug report, review request, or question for Codex.
+      required: true
+      selector:
+        text:
+          multiline: true
+    title:
+      name: Title
+      description: Optional short task title.
+      required: false
+      selector:
+        text:
+          multiline: false
+  sequence:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ prompt | default('') | trim == '' }}"
+          sequence:
+            - variables:
+                response:
+                  ok: false
+                  error: Prompt is required.
+            - stop: Prompt is required.
+              response_variable: response
+              error: true
+    - action: codex_cli.list_tasks
+      response_variable: task_list
+    - variables:
+        active_tasks: >-
+          {{ task_list.service_response.tasks
+             | default([])
+             | selectattr('status', 'in', ['queued', 'running'])
+             | list }}
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ active_tasks | count > 0 }}"
+          sequence:
+            - variables:
+                response:
+                  ok: false
+                  error: Codex already has an active task.
+                  active_task_id: "{{ active_tasks[0].task_id | default('') }}"
+            - stop: Codex already has an active task.
+              response_variable: response
+              error: true
+    - action: codex_cli.start_task
+      data:
+        title: "{{ title | default('Home Assistant task') }}"
+        prompt: "{{ prompt }}"
+      response_variable: codex_result
+    - stop: Codex task started.
+      response_variable: codex_result

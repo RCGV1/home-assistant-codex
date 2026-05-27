@@ -1,0 +1,25 @@
+configuration:
+  api_token:
+    name: API token
+    description: Leave empty on first start to let the app generate a random token and store it here. This token protects the worker HTTP API; use the same value when configuring the Home Assistant Codex integration.
+  codex_model:
+    name: Codex model
+    description: Model passed to codex exec. Use default to let Codex CLI choose its bundled default. GPT-5.3-Codex is the current recommended coding model.
+  codex_sandbox:
+    name: Codex sandbox
+    description: read-only allows inspection only; workspace-write allows Codex to edit the /config workspace but keeps generated shell commands sandboxed; danger-full-access removes Codex sandboxing inside the add-on container and should only be used if workspace-write blocks required commands.
+  task_root:
+    name: Task root
+    description: Folder where prompts, logs, snapshots, status files, and change manifests are saved.
+  notify_service:
+    name: Notification service
+    description: Optional Home Assistant notify service for task completion, failures, and questions. Leave unset or blank to use persistent notifications. The app configuration page does not support Home Assistant service autocomplete, so this is a plain text field.
+  task_timeout_seconds:
+    name: Task timeout
+    description: Maximum run time for one Codex task before the worker stops it.
+  auto_save_lovelace:
+    name: Auto-save Lovelace dashboards
+    description: After Codex edits storage-mode Lovelace files, save changed dashboards through the Home Assistant WebSocket API so the UI updates in memory.
+  ha_url:
+    name: Home Assistant API URL
+    description: API base URL used by the app for Home Assistant calls. The default Supervisor Core proxy is recommended.
