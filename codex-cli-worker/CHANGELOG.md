@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.14
+
+- Advertise the worker app through Supervisor discovery for the Codex integration.
+- Document automatic worker connection, Codex device-code prerequisites, and subscription requirements.
+
 ## 0.1.13
 
 - Broadened the custom AppArmor profile so the Python/Node worker can start while keeping AppArmor enabled.

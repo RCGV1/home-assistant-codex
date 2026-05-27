@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import CodexCliApiClient, CodexCliApiError
@@ -19,11 +19,8 @@ from .const import (
     ATTR_TASK_ID,
     ATTR_TITLE,
     ATTR_FORCE,
-    CONF_API_TOKEN,
     CONF_BASE_URL,
-    DEFAULT_BASE_URL,
     DOMAIN,
-    LEGACY_DEFAULT_BASE_URL,
     SERVICE_CANCEL_TASK,
     SERVICE_GET_LOGIN_STATUS,
     SERVICE_GET_TASK,
@@ -33,6 +30,7 @@ from .const import (
     SERVICE_START_TASK,
 )
 from .coordinator import CodexCliCoordinator
+from .discovery import async_discover_worker
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -63,10 +61,14 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Codex CLI from a config entry."""
-    _async_update_legacy_base_url(hass, entry)
-    base_url = entry.options.get(CONF_BASE_URL, entry.data[CONF_BASE_URL])
-    api_token = entry.options.get(CONF_API_TOKEN, entry.data[CONF_API_TOKEN])
-    client = CodexCliApiClient(async_get_clientsession(hass), base_url, api_token)
+    session = async_get_clientsession(hass)
+    try:
+        worker = await async_discover_worker(session)
+    except CodexCliApiError as exc:
+        raise ConfigEntryNotReady(str(exc)) from exc
+
+    _async_update_discovered_entry(hass, entry, worker.base_url)
+    client = CodexCliApiClient(session, worker.base_url, worker.api_token)
     coordinator = CodexCliCoordinator(hass, client)
     entry.runtime_data = CodexCliRuntimeData(client=client, coordinator=coordinator)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -89,21 +91,11 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-def _async_update_legacy_base_url(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Move the old LAN URL default to the internal app hostname."""
-    data = dict(entry.data)
-    options = dict(entry.options)
-    changed = False
-
-    if data.get(CONF_BASE_URL) == LEGACY_DEFAULT_BASE_URL:
-        data[CONF_BASE_URL] = DEFAULT_BASE_URL
-        changed = True
-    if options.get(CONF_BASE_URL) == LEGACY_DEFAULT_BASE_URL:
-        options[CONF_BASE_URL] = DEFAULT_BASE_URL
-        changed = True
-
-    if changed:
-        hass.config_entries.async_update_entry(entry, data=data, options=options)
+def _async_update_discovered_entry(hass: HomeAssistant, entry: ConfigEntry, base_url: str) -> None:
+    """Persist only non-secret discovered connection metadata."""
+    data = {CONF_BASE_URL: base_url}
+    if dict(entry.data) != data or dict(entry.options):
+        hass.config_entries.async_update_entry(entry, data=data, options={})
 
 
 def _first_runtime(hass: HomeAssistant) -> CodexCliRuntimeData:

@@ -12,10 +12,9 @@ Codex connects Home Assistant to the local Codex CLI Worker add-on. It lets Home
 
 ## Configuration
 
-- Worker URL: The local HTTP URL for the Codex CLI Worker app API. The recommended URL is `http://local-codex-cli-worker:9123`, which uses Home Assistant's internal app network instead of a LAN-exposed port.
-- API token: The shared token that allows Home Assistant to call the worker API.
+The integration auto-detects the installed Codex CLI Worker app through the local Supervisor API. It also reads the worker's generated API token from the app options, keeps it in memory, and stores only the non-secret worker URL in the Home Assistant config entry.
 
-The integration can be reconfigured from the integration options or by using the reconfigure flow.
+There is no worker URL or API token to enter.
 
 ## Entities
 
@@ -53,7 +52,7 @@ The integration polls the worker every 30 seconds. Actions that start, cancel, o
 ## Troubleshooting
 
 - If entities are unavailable, check that the Codex CLI Worker add-on is running and that the worker URL is reachable.
-- If Home Assistant asks for reauthentication, update the API token so it matches the add-on configuration.
+- If setup cannot connect, restart the Codex CLI Worker app so it can generate its worker API token, then reload or add the integration again.
 - If Codex is not signed in, run `codex_cli.start_login` or use the add-on web UI to start the sign-in flow.
 - If a task needs input, use `codex_cli.reply_task` with the task ID and reply text.
 
@@ -65,5 +64,4 @@ The integration polls the worker every 30 seconds. Actions that start, cancel, o
 ## Known Limitations
 
 - This integration controls a single local Codex CLI Worker instance.
-- It does not auto-discover the add-on URL.
 - It depends on the worker add-on for task execution, Codex authentication, and notification delivery.

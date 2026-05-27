@@ -64,11 +64,21 @@ Then install **Codex CLI Worker** from the Apps store.
 1. Open **Codex CLI Worker**.
 2. Leave `api_token` empty on first start if you want the app to generate a strong random token.
 3. Start the app.
-4. Reopen the app options and copy the generated `api_token`; you will use it in the integration.
+
+The generated token protects the worker API. The **Codex** integration reads it automatically through Home Assistant's local Supervisor API, so you do not need to copy it into the integration.
 
 The app's web UI is available through Home Assistant Ingress. Do not try to open port `9123` directly; it is intentionally not exposed.
 
 ### 3. Sign In to Codex
+
+Before starting sign-in, enable **Enable device code authorization for Codex** in ChatGPT:
+
+1. Open the ChatGPT website.
+2. Click your profile.
+3. Go to **Settings** -> **Security**.
+4. Turn on **Enable device code authorization for Codex** near the bottom of the page.
+
+This setting is in ChatGPT, not the Codex website.
 
 Open the app web UI and click **Start login**, or call the `codex_cli.start_login` action after the integration is installed.
 
@@ -79,6 +89,8 @@ The app sends a Home Assistant persistent notification with:
 - The one-time device code.
 
 Scan the QR code or open the link, then enter the device code shown in the notification.
+
+Codex CLI sign-in uses your OpenAI subscription. This project does not use OpenAI API keys for Codex tasks.
 
 ### 4. Install the Custom Integration
 
@@ -118,13 +130,8 @@ In Home Assistant:
 
 1. Go to **Settings** -> **Devices & services**.
 2. Add integration **Codex**.
-3. Use this worker URL:
 
-```text
-http://local-codex-cli-worker:9123
-```
-
-4. Paste the worker `api_token` from the app options.
+The integration auto-detects the installed worker app and its generated worker API token. There is no worker URL or API token to enter.
 
 ## Actions
 

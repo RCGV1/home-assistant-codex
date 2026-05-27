@@ -9,8 +9,8 @@ DOMAIN: Final = "codex_cli"
 CONF_BASE_URL: Final = "base_url"
 CONF_API_TOKEN: Final = "api_token"
 
-DEFAULT_BASE_URL: Final = "http://local-codex-cli-worker:9123"
-LEGACY_DEFAULT_BASE_URL: Final = "http://192.168.1.229:9123"
+WORKER_ADDON_NAME: Final = "Codex CLI Worker"
+WORKER_ADDON_SLUG: Final = "codex_cli_worker"
 DEFAULT_SCAN_INTERVAL_SECONDS: Final = 30
 
 SERVICE_START_TASK: Final = "start_task"

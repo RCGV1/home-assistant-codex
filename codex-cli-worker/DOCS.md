@@ -14,17 +14,13 @@ Prebuilt images are published to `ghcr.io/moryoav/codex-cli-worker` for `amd64` 
 
 The web UI is intended to be opened only through Home Assistant Ingress. The app does not publish its HTTP port to the LAN by default, and the Flask server rejects spoofed Ingress requests unless they come from the Home Assistant Ingress proxy address.
 
-Programmatic API calls still require the worker API token unless they are proxied through authenticated Home Assistant Ingress. The Home Assistant Codex integration should use the internal app hostname:
-
-```text
-http://local-codex-cli-worker:9123
-```
+Programmatic API calls still require the worker API token unless they are proxied through authenticated Home Assistant Ingress. The Home Assistant Codex integration discovers the internal app hostname automatically through Supervisor metadata.
 
 The app does not request host networking, Docker API access, full access, host PID/UTS access, privileged kernel capabilities, or elevated Supervisor roles. It keeps AppArmor enabled and ships a custom `apparmor.txt` profile. The `/config` mount is intentionally read-write because editing Home Assistant configuration is the core purpose of the app.
 
 ## API Token
 
-The API token protects the worker HTTP API. Leave `api_token` empty on first start and the app generates a random token, stores it back into the app options, and uses it immediately. Use the same token when adding the Home Assistant `Codex` integration.
+The API token protects the worker HTTP API. Leave `api_token` empty on first start and the app generates a random token, stores it back into the app options, and uses it immediately. The Home Assistant `Codex` integration reads this generated token through the local Supervisor API and does not ask you to paste it.
 
 The token is not your OpenAI or ChatGPT credential. Codex authentication is still handled separately with `codex login`.
 
@@ -42,11 +38,15 @@ The token is not your OpenAI or ChatGPT credential. Codex authentication is stil
 
 Use the add-on web UI or the Home Assistant service `codex_cli.start_login` to start `codex login --device-auth`.
 
+Before starting sign-in, enable **Enable device code authorization for Codex** in ChatGPT: open the ChatGPT website, click your profile, open **Settings** -> **Security**, and turn on the toggle near the bottom of the page. This setting is not in the Codex website.
+
 The add-on posts a Home Assistant persistent notification containing a QR code, link, and one-time device code. The QR code opens the OpenAI device page; type the code from the same notification into that page. The add-on refreshes the notification when the code appears and detects completion automatically. You do not need to run `docker exec`.
 
 When opened through Home Assistant Ingress, the app web UI can start the login flow without entering the worker API token because Home Assistant already authenticated the session. Direct HTTP/API calls still require the worker API token.
 
 The app uses the built-in Supervisor token for Home Assistant notifications and dashboard saves through the Home Assistant Core API proxy. No Home Assistant long-lived access token is required.
+
+Codex CLI sign-in uses your OpenAI subscription. This project does not use OpenAI API keys for Codex tasks.
 
 ## Notifications
 

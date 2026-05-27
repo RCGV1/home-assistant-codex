@@ -41,7 +41,7 @@ class CodexRunningBinarySensor(CoordinatorEntity[CodexCliCoordinator], BinarySen
             "name": "Codex",
             "manufacturer": "OpenAI",
             "model": "Codex CLI Worker",
-            "configuration_url": entry.options.get(CONF_BASE_URL, entry.data[CONF_BASE_URL]),
+            "configuration_url": entry.data.get(CONF_BASE_URL),
         }
 
     @property

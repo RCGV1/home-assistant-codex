@@ -3,65 +3,27 @@
     "step": {
       "user": {
         "title": "Codex",
-        "description": "Connect Home Assistant to the local Codex worker add-on.",
-        "data": {
-          "base_url": "Worker URL",
-          "api_token": "API token"
-        },
-        "data_description": {
-          "base_url": "The URL of the local Codex CLI Worker add-on API.",
-          "api_token": "The API token configured in the Codex CLI Worker add-on options."
-        }
+        "description": "Codex automatically detects the installed Codex CLI Worker app and its generated worker API token."
       },
       "reauth_confirm": {
-        "title": "Codex authentication",
-        "description": "Update the Codex worker connection details.",
-        "data": {
-          "base_url": "Worker URL",
-          "api_token": "API token"
-        },
-        "data_description": {
-          "base_url": "The URL of the local Codex CLI Worker add-on API.",
-          "api_token": "The API token configured in the Codex CLI Worker add-on options."
-        }
+        "title": "Codex",
+        "description": "Reconnect to the installed Codex CLI Worker app."
       },
       "reconfigure": {
         "title": "Codex",
-        "description": "Update the Codex worker connection details.",
-        "data": {
-          "base_url": "Worker URL",
-          "api_token": "API token"
-        },
-        "data_description": {
-          "base_url": "The URL of the local Codex CLI Worker add-on API.",
-          "api_token": "The API token configured in the Codex CLI Worker add-on options."
-        }
+        "description": "Reconnect to the installed Codex CLI Worker app."
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to the Codex worker.",
-      "invalid_auth": "The worker rejected the API token."
+      "cannot_connect": "Could not discover or connect to the Codex CLI Worker app. Make sure it is installed, started, and has generated its worker API token.",
+      "invalid_auth": "The worker rejected its generated API token. Restart the Codex CLI Worker app and try again."
     },
     "abort": {
       "already_configured": "Codex is already configured.",
-      "reauth_successful": "Codex authentication was updated.",
+      "cannot_connect": "Could not discover or connect to the Codex CLI Worker app.",
+      "reauth_successful": "Codex was reconnected.",
       "reconfigure_successful": "Codex was reconfigured.",
       "unknown": "The Codex config entry could not be found."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Codex options",
-        "data": {
-          "base_url": "Worker URL",
-          "api_token": "API token"
-        },
-        "data_description": {
-          "base_url": "The URL of the local Codex CLI Worker add-on API.",
-          "api_token": "The API token configured in the Codex CLI Worker add-on options."
-        }
-      }
     }
   },
   "entity": {
