@@ -31,6 +31,7 @@ All entities are diagnostic entities on the Codex device.
 
 - `codex_cli.start_task`: Start a Codex task. Requires `prompt`.
 - `codex_cli.start_login`: Start the Codex sign-in flow; optional `force`.
+- `codex_cli.logout`: Remove saved Codex CLI credentials from the worker.
 - `codex_cli.get_login_status`: Return current sign-in status.
 - `codex_cli.list_tasks`: Return known tasks.
 - `codex_cli.get_task`: Return one task by task ID.

@@ -18,6 +18,7 @@ import tarfile
 import threading
 import time
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -692,6 +693,15 @@ def write_login_qr(login_id: str, url: str) -> str:
     filename = f"codex_login_{login_id}.svg"
     path = AUTH_QR_DIR / filename
     image.save(str(path))
+    try:
+        tree = ET.parse(path)
+        root = tree.getroot()
+        namespace = root.tag.removesuffix("svg")
+        rect = ET.Element(f"{namespace}rect", {"width": "100%", "height": "100%", "fill": "#fff"})
+        root.insert(0, rect)
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+    except Exception as exc:
+        print(f"Could not add QR background: {exc}", flush=True)
     return f"/local/codex_cli_auth/{filename}"
 
 
@@ -830,6 +840,55 @@ def start_codex_login_flow(force: bool = False) -> dict[str, Any]:
     thread = threading.Thread(target=run_codex_device_login, args=(login_id,), daemon=True)
     thread.start()
     return auth_status_payload()
+
+
+def logout_codex() -> dict[str, Any]:
+    global auth_process
+    if active_task_id():
+        return {"ok": False, "error": "cannot log out while a Codex task is running", "status": auth_status_payload()}
+    proc_to_stop: subprocess.Popen[str] | None = None
+    with auth_lock:
+        if auth_process is not None and auth_process.poll() is None:
+            proc_to_stop = auth_process
+            auth_process = None
+    if proc_to_stop is not None:
+        proc_to_stop.terminate()
+        try:
+            proc_to_stop.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc_to_stop.kill()
+    codex = shutil.which("codex") or "codex"
+    try:
+        proc = subprocess.run(
+            [codex, "logout"],
+            cwd="/config",
+            env=codex_env(),
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+    except Exception as exc:
+        update_auth_state(status="logout_failed", error=str(exc), completed_at=utc_now())
+        return {"ok": False, "error": str(exc), "status": auth_status_payload()}
+    message = redact((proc.stdout or proc.stderr or "").strip())
+    login = codex_login_status()
+    if proc.returncode == 0 or not login.get("status_ok"):
+        dismiss_persistent_notification(AUTH_NOTIFY_ID)
+        update_auth_state(
+            status="logged_out",
+            completed_at=utc_now(),
+            returncode=proc.returncode,
+            message=message,
+            verification_url="",
+            user_code="",
+            qr_url="",
+            output="",
+            error="",
+        )
+        notify("Codex signed out", "Codex CLI credentials were removed from the Home Assistant worker.")
+        return {"ok": True, "message": message, "status": auth_status_payload()}
+    update_auth_state(status="logout_failed", completed_at=utc_now(), returncode=proc.returncode, error=message)
+    return {"ok": False, "error": message or f"codex logout exited with code {proc.returncode}", "status": auth_status_payload()}
 
 
 def auto_start_login_if_needed() -> None:
@@ -1137,6 +1196,7 @@ def index() -> Response:
     <h2>ChatGPT login</h2>
     <p>Start the device-code login from here or with the <code>codex_cli.start_login</code> Home Assistant service. The worker will send a persistent notification with a QR code and sign-in link.</p>
     <button onclick="startLogin()">Start login</button>
+    <button onclick="logoutCodex()" style="background:#5c6675">Log out</button>
     <pre id="login-result"></pre>
     <div id="login-card"></div>
   </section>
@@ -1210,6 +1270,17 @@ async function startLogin() {{
   await renderJsonResponse(result, res);
   refreshLoginStatus();
 }}
+async function logoutCodex() {{
+  const result = document.getElementById('login-result');
+  result.textContent = 'Logging out...';
+  const res = await fetch(workerUrl('/auth/logout'), {{
+    method: 'POST',
+    headers: workerHeaders(),
+    body: JSON.stringify({{}})
+  }});
+  await renderJsonResponse(result, res);
+  refreshLoginStatus();
+}}
 refreshLoginStatus();
 </script>
 </body>
@@ -1262,6 +1333,14 @@ def start_auth() -> Response:
 @require_auth
 def get_auth_status() -> Response:
     return jsonify({"ok": True, "auth": auth_status_payload()})
+
+
+@app.post("/auth/logout")
+@require_auth
+def logout_auth() -> Response:
+    result = logout_codex()
+    status_code = 200 if result.get("ok") else 409 if active_task_id() else 500
+    return jsonify(result), status_code
 
 
 @app.get("/tasks")

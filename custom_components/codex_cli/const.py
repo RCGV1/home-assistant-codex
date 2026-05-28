@@ -19,6 +19,7 @@ SERVICE_LIST_TASKS: Final = "list_tasks"
 SERVICE_CANCEL_TASK: Final = "cancel_task"
 SERVICE_REPLY_TASK: Final = "reply_task"
 SERVICE_START_LOGIN: Final = "start_login"
+SERVICE_LOGOUT: Final = "logout"
 SERVICE_GET_LOGIN_STATUS: Final = "get_login_status"
 
 ATTR_PROMPT: Final = "prompt"

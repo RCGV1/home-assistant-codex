@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      image_tags: ${{ steps.version.outputs.image_tags }}
     steps:
       - uses: actions/checkout@v6
       - name: Read version from config.yaml
@@ -32,6 +33,16 @@ jobs:
             exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "image_tags<<EOF"
+            echo "${version}"
+            if [ "${GITHUB_EVENT_NAME}" = "release" ]; then
+              echo "latest"
+            else
+              echo "${GITHUB_REF_NAME}"
+            fi
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
   init:
     name: Initialize build matrix
@@ -71,8 +82,7 @@ jobs:
           context: ${{ env.ADDON_PATH }}
           image: ${{ matrix.image }}
           image-tags: |
-            ${{ needs.version.outputs.version }}
-            latest
+            ${{ needs.version.outputs.image_tags }}
           labels: |
             io.hass.type=app
           push: "true"
@@ -96,5 +106,4 @@ jobs:
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           image-name: ${{ env.IMAGE_NAME }}
           image-tags: |
-            ${{ needs.version.outputs.version }}
-            latest
+            ${{ needs.version.outputs.image_tags }}

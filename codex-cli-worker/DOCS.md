@@ -52,6 +52,8 @@ The add-on posts a Home Assistant persistent notification containing a QR code, 
 
 When opened through Home Assistant Ingress, the app web UI can start the login flow without entering the worker API token because Home Assistant already authenticated the session. Direct HTTP/API calls still require the worker API token.
 
+Use the add-on web UI **Log out** button or the Home Assistant service `codex_cli.logout` to run `codex logout` and remove saved Codex CLI credentials from the worker. Logout is blocked while a Codex task is actively running.
+
 The app uses the built-in Supervisor token for Home Assistant notifications and dashboard saves through the Home Assistant Core API proxy. No Home Assistant long-lived access token is required.
 
 Codex CLI sign-in uses your ChatGPT/OpenAI account. It may work with a free ChatGPT account, but ChatGPT Plus or higher is recommended for more reasonable usage limits. This project does not use OpenAI API keys for Codex tasks.

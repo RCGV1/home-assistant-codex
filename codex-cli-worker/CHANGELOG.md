@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.22
+
+- Added logout support through the worker web UI and the `codex_cli.logout` Home Assistant action.
+- Improved Codex sign-in QR rendering by adding an explicit white QR background for dark Home Assistant themes.
+- Added a documented `dev` branch workflow for canary testing before stable releases.
+- Updated image publishing so manual branch builds do not move the `latest` image tag.
+
 ## 0.1.21
 
 - Ignore binary Home Assistant storage helper files such as `.pickle` and `.pkl` when building task snapshots.

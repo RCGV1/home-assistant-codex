@@ -48,6 +48,10 @@ class CodexCliApiClient:
         """Fetch Codex login flow status."""
         return await self._request("GET", "/auth/status")
 
+    async def logout(self) -> dict[str, Any]:
+        """Remove saved Codex CLI credentials from the worker."""
+        return await self._request("POST", "/auth/logout")
+
     async def list_tasks(self) -> dict[str, Any]:
         """List known tasks."""
         return await self._request("GET", "/tasks")

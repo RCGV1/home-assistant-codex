@@ -23,6 +23,7 @@ from .const import (
     SERVICE_CANCEL_TASK,
     SERVICE_GET_LOGIN_STATUS,
     SERVICE_GET_TASK,
+    SERVICE_LOGOUT,
     SERVICE_LIST_TASKS,
     SERVICE_REPLY_TASK,
     SERVICE_START_LOGIN,
@@ -143,6 +144,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
         except CodexCliApiError as exc:
             raise HomeAssistantError(str(exc)) from exc
 
+    async def handle_logout(call: ServiceCall) -> dict[str, Any]:
+        runtime_data = _first_runtime(hass)
+        try:
+            result = await runtime_data.client.logout()
+        except CodexCliApiError as exc:
+            raise HomeAssistantError(str(exc)) from exc
+        await runtime_data.coordinator.async_request_refresh()
+        return result
+
     async def handle_get_task(call: ServiceCall) -> dict[str, Any]:
         runtime_data = _first_runtime(hass)
         try:
@@ -193,6 +203,12 @@ def _async_register_services(hass: HomeAssistant) -> None:
         DOMAIN,
         SERVICE_GET_LOGIN_STATUS,
         handle_get_login_status,
+        **register_kwargs,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_LOGOUT,
+        handle_logout,
         **register_kwargs,
     )
     hass.services.async_register(

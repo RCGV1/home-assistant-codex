@@ -16,6 +16,8 @@ start_login:
 
 get_login_status:
 
+logout:
+
 get_task:
   fields:
     task_id:

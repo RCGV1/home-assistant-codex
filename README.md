@@ -177,6 +177,7 @@ The integration exposes these Home Assistant actions:
 
 - `codex_cli.start_task`
 - `codex_cli.start_login`
+- `codex_cli.logout`
 - `codex_cli.get_login_status`
 - `codex_cli.list_tasks`
 - `codex_cli.get_task`
@@ -196,6 +197,22 @@ response_variable: codex_result
 
 See [examples/scripts.yaml](examples/scripts.yaml) for a starter script you can expose to Assist or another LLM integration.
 
+## Stable And Dev Branches
+
+Use the default repository URL for stable releases:
+
+```text
+https://github.com/moryoav/home-assistant-codex
+```
+
+Development and canary builds are tested on the `dev` branch before being merged to `main`:
+
+```text
+https://github.com/moryoav/home-assistant-codex#dev
+```
+
+Only use the `dev` branch if you want to test changes before they are released to regular users. Stable users should stay on the default repository URL.
+
 ## Publishing Images
 
 The repository includes a GitHub Actions workflow that builds and publishes multi-architecture images to GitHub Container Registry:
@@ -205,6 +222,8 @@ ghcr.io/moryoav/codex-cli-worker
 ```
 
 The app `config.yaml` points at that image. Home Assistant uses the app version as the image tag.
+
+Release builds also publish the `latest` image tag. Manual workflow builds from development branches publish the app version and branch name tags, but do not move `latest`.
 
 ## Development Layout
 
