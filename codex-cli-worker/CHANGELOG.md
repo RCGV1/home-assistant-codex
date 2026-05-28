@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.30
+
+- Preserve reset times from the rich Codex `/status` panel when a later TUI footer redraw also contains 5-hour and weekly percentages without reset text.
+
 ## 0.1.29
 
 - Submit the Codex TUI `/status` command as typed text followed by a delayed Enter keypress.

@@ -435,12 +435,14 @@ def _parse_usage_output(text: str) -> dict[str, str]:
         if matches := list(FIVE_HOUR_RE.finditer(line)):
             match = matches[-1]
             five_hour_percent = match.group("percent")
-            five_hour_reset = match.group("reset") or ""
+            if reset := match.group("reset"):
+                five_hour_reset = reset
             five_hour = f"5h {five_hour_percent}%"
         if matches := list(WEEKLY_RE.finditer(line)):
             match = matches[-1]
             weekly_percent = match.group("percent")
-            weekly_reset = match.group("reset") or ""
+            if reset := match.group("reset"):
+                weekly_reset = reset
             weekly = f"weekly {weekly_percent}%"
         if matches := list(CONTEXT_RE.finditer(line)):
             match = matches[-1]
