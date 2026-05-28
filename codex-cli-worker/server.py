@@ -68,9 +68,9 @@ UUID_RE = re.compile(
 URL_RE = re.compile(r"https?://[^\s<>)\"']+")
 DEVICE_CODE_RE = re.compile(r"\b[A-Z0-9]{4,}(?:-[A-Z0-9]{4,})+\b")
 ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|[PX^_].*?\x1b\\|[@-Z\\-_])")
-FIVE_HOUR_RE = re.compile(r"(?i)\b(?:5[- ]?(?:h|hour)|five[- ]hour)\b[^\n]*")
-WEEKLY_RE = re.compile(r"(?i)\bweekly\b[^\n]*")
-CONTEXT_RE = re.compile(r"(?i)\bcontext\b[^\n]*")
+FIVE_HOUR_RE = re.compile(r"(?i)(?<!\w)(?:5\s*h|5\s*-\s*hour|five\s*-\s*hour|five\s+hour)\s+\d{1,3}%(?!\d)")
+WEEKLY_RE = re.compile(r"(?i)(?<!\w)weekly\s+\d{1,3}%(?!\d)")
+CONTEXT_RE = re.compile(r"(?i)(?<!\w)context\s+\d{1,3}%\s+left\b")
 
 EXCLUDED_PARTS = {
     ".cache",
@@ -343,12 +343,12 @@ def _parse_usage_output(text: str) -> dict[str, str]:
     weekly = ""
     context = ""
     for line in lines:
-        if FIVE_HOUR_RE.search(line):
-            five_hour = line
-        if WEEKLY_RE.search(line):
-            weekly = line
-        if CONTEXT_RE.search(line):
-            context = line
+        if matches := FIVE_HOUR_RE.findall(line):
+            five_hour = matches[-1]
+        if matches := WEEKLY_RE.findall(line):
+            weekly = matches[-1]
+        if matches := CONTEXT_RE.findall(line):
+            context = matches[-1]
     return {
         "five_hour_limit": five_hour,
         "weekly_limit": weekly,

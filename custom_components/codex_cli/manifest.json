@@ -1,7 +1,7 @@
 {
   "domain": "codex_cli",
   "name": "Codex",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "documentation": "https://github.com/moryoav/home-assistant-codex",
   "issue_tracker": "https://github.com/moryoav/home-assistant-codex/issues",
   "codeowners": ["@moryoav"],

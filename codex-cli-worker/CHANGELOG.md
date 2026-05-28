@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.26
+
+- Parse concise Codex usage values from TUI redraw output instead of storing an overlong terminal line.
+- Keep usage sensor states short enough for Home Assistant state values.
+
 ## 0.1.25
 
 - Detect Codex CLI's trust-directory prompt even when TUI control sequences remove spacing.
