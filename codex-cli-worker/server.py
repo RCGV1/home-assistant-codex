@@ -41,6 +41,7 @@ TASK_STATE_FILE = DATA_ROOT / "task_index.json"
 
 DEFAULT_OPTIONS = {
     "codex_model": "gpt-5.3-codex",
+    "model_reasoning_effort": "medium",
     "codex_sandbox": "workspace-write",
     "task_root": "/config/codex_tasks",
     "notify_service": "",
@@ -48,6 +49,7 @@ DEFAULT_OPTIONS = {
     "auto_save_lovelace": True,
     "ha_url": "http://supervisor/core",
 }
+REASONING_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
 
 SNAPSHOT_MAX_BYTES = 8 * 1024 * 1024
 LOG_TAIL_BYTES = 300_000
@@ -162,6 +164,13 @@ def read_options() -> dict[str, Any]:
 
 def task_root() -> Path:
     return Path(str(read_options().get("task_root") or DEFAULT_OPTIONS["task_root"]))
+
+
+def model_reasoning_effort(options: dict[str, Any]) -> str:
+    effort = str(options.get("model_reasoning_effort") or DEFAULT_OPTIONS["model_reasoning_effort"]).strip()
+    if effort not in REASONING_EFFORTS:
+        return DEFAULT_OPTIONS["model_reasoning_effort"]
+    return effort
 
 
 def api_token() -> str:
@@ -903,6 +912,7 @@ def build_codex_args(task_id: str, prompt_file: Path, final_file: Path, session_
         model = ""
     if model:
         args.extend(["--model", model])
+    args.extend(["--config", f'model_reasoning_effort="{model_reasoning_effort(options)}"'])
     if session_id:
         args.extend(["resume", session_id, "-"])
     else:

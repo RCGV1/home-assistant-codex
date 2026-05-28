@@ -87,6 +87,8 @@ The app keeps an internal worker API token in private app storage. The **Codex**
 
 The app's web UI is available through Home Assistant Ingress. Do not try to open port `9123` directly; it is intentionally not exposed.
 
+The app options include dropdowns for the Codex model and model reasoning effort. `medium` reasoning is the default balance; `high` and `xhigh` can spend more time/quota, and `xhigh` only applies where the selected model supports it.
+
 ### 3. Sign In to Codex
 
 Before starting sign-in, enable **Enable device code authorization for Codex** in ChatGPT:

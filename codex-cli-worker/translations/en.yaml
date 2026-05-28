@@ -2,6 +2,9 @@ configuration:
   codex_model:
     name: Codex model
     description: Model passed to codex exec. Use default to let Codex CLI choose its bundled default. GPT-5.3-Codex is the current recommended coding model.
+  model_reasoning_effort:
+    name: Model reasoning effort
+    description: Reasoning effort passed to codex exec for supported models. minimal is fastest; low is lighter; medium is balanced; high uses more reasoning; xhigh is the highest effort where the selected model supports it.
   codex_sandbox:
     name: Codex sandbox
     description: read-only allows inspection only; workspace-write allows Codex to edit the /config workspace but keeps generated shell commands sandboxed; danger-full-access removes Codex sandboxing inside the add-on container and should only be used if workspace-write blocks required commands.

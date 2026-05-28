@@ -28,6 +28,14 @@ The token is not your OpenAI or ChatGPT credential. Codex authentication is stil
 
 `codex_model` is a fixed selection to avoid typo-prone free text. `gpt-5.3-codex` is the default because OpenAI lists it as the current most capable agentic coding model. Use `default` to let the installed Codex CLI choose its bundled default model.
 
+`model_reasoning_effort` controls how much reasoning Codex asks supported models to use for each non-interactive task. The app passes it to `codex exec` as a per-run `--config model_reasoning_effort="<value>"` override rather than writing it into `config.toml`. Available values are:
+
+- `minimal`: fastest and lowest reasoning.
+- `low`: lighter reasoning.
+- `medium`: balanced default.
+- `high`: more reasoning, usually slower and more quota-intensive.
+- `xhigh`: highest effort where the selected model supports it; support is model-dependent.
+
 ## Sandbox
 
 - `read-only`: Codex can inspect files and run read-only commands, but should not edit `/config`.
@@ -46,7 +54,7 @@ When opened through Home Assistant Ingress, the app web UI can start the login f
 
 The app uses the built-in Supervisor token for Home Assistant notifications and dashboard saves through the Home Assistant Core API proxy. No Home Assistant long-lived access token is required.
 
-Codex CLI sign-in uses your OpenAI subscription. This project does not use OpenAI API keys for Codex tasks.
+Codex CLI sign-in uses your ChatGPT/OpenAI account. It may work with a free ChatGPT account, but ChatGPT Plus or higher is recommended for more reasonable usage limits. This project does not use OpenAI API keys for Codex tasks.
 
 ## Notifications
 
