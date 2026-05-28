@@ -5,10 +5,6 @@ start_task:
       selector:
         text:
           multiline: true
-    title:
-      required: false
-      selector:
-        text:
 
 start_login:
   fields:

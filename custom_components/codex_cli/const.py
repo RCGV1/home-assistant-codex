@@ -22,7 +22,6 @@ SERVICE_START_LOGIN: Final = "start_login"
 SERVICE_GET_LOGIN_STATUS: Final = "get_login_status"
 
 ATTR_PROMPT: Final = "prompt"
-ATTR_TITLE: Final = "title"
 ATTR_TASK_ID: Final = "task_id"
 ATTR_REPLY: Final = "reply"
 ATTR_FORCE: Final = "force"

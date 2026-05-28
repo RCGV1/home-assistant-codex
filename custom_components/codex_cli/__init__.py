@@ -17,7 +17,6 @@ from .const import (
     ATTR_PROMPT,
     ATTR_REPLY,
     ATTR_TASK_ID,
-    ATTR_TITLE,
     ATTR_FORCE,
     CONF_BASE_URL,
     DOMAIN,
@@ -37,7 +36,6 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 START_TASK_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_PROMPT): str,
-        vol.Optional(ATTR_TITLE): str,
     }
 )
 TASK_ID_SCHEMA = vol.Schema({vol.Required(ATTR_TASK_ID): str})
@@ -123,10 +121,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
     async def handle_start_task(call: ServiceCall) -> dict[str, Any]:
         runtime_data = _first_runtime(hass)
         try:
-            result = await runtime_data.client.start_task(
-                call.data[ATTR_PROMPT],
-                call.data.get(ATTR_TITLE),
-            )
+            result = await runtime_data.client.start_task(call.data[ATTR_PROMPT])
         except CodexCliApiError as exc:
             raise HomeAssistantError(str(exc)) from exc
         await runtime_data.coordinator.async_request_refresh()

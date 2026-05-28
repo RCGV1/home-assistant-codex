@@ -10,13 +10,6 @@ llm_run_codex_config_task:
       selector:
         text:
           multiline: true
-    title:
-      name: Title
-      description: Optional short task title.
-      required: false
-      selector:
-        text:
-          multiline: false
   sequence:
     - choose:
         - conditions:
@@ -53,7 +46,6 @@ llm_run_codex_config_task:
               error: true
     - action: codex_cli.start_task
       data:
-        title: "{{ title | default('Home Assistant task') }}"
         prompt: "{{ prompt }}"
       response_variable: codex_result
     - stop: Codex task started.

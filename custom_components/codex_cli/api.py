@@ -52,12 +52,9 @@ class CodexCliApiClient:
         """List known tasks."""
         return await self._request("GET", "/tasks")
 
-    async def start_task(self, prompt: str, title: str | None = None) -> dict[str, Any]:
+    async def start_task(self, prompt: str) -> dict[str, Any]:
         """Start a Codex task."""
-        payload: dict[str, Any] = {"prompt": prompt}
-        if title:
-            payload["title"] = title
-        return await self._request("POST", "/tasks", json=payload)
+        return await self._request("POST", "/tasks", json={"prompt": prompt})
 
     async def get_task(self, task_id: str) -> dict[str, Any]:
         """Fetch one task."""

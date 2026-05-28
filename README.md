@@ -162,7 +162,6 @@ Example:
 ```yaml
 action: codex_cli.start_task
 data:
-  title: Review dashboard
   prompt: Check my Home dashboard for broken cards and suggest fixes.
 response_variable: codex_result
 ```

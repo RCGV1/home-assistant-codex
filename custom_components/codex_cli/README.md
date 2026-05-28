@@ -29,7 +29,7 @@ All entities are diagnostic entities on the Codex device.
 
 ## Actions
 
-- `codex_cli.start_task`: Start a Codex task. Requires `prompt`; optional `title`.
+- `codex_cli.start_task`: Start a Codex task. Requires `prompt`.
 - `codex_cli.start_login`: Start the Codex sign-in flow; optional `force`.
 - `codex_cli.get_login_status`: Return current sign-in status.
 - `codex_cli.list_tasks`: Return known tasks.
@@ -42,7 +42,6 @@ Example automation action:
 ```yaml
 action: codex_cli.start_task
 data:
-  title: Check dashboard
   prompt: Can you inspect my Home dashboard and report any obvious issues?
 response_variable: codex_result
 ```
