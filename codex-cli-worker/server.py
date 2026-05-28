@@ -92,6 +92,8 @@ EXCLUDED_SUFFIXES = {
     ".jpeg",
     ".mp3",
     ".mp4",
+    ".pickle",
+    ".pkl",
     ".ttf",
 }
 SENSITIVE_REPLACEMENTS = [
@@ -454,6 +456,8 @@ def validate_changed_files(changes: dict[str, list[str]]) -> list[str]:
                 json.loads(path.read_text(encoding="utf-8"))
             elif path.suffix.lower() in {".yaml", ".yml"}:
                 yaml.load(path.read_text(encoding="utf-8"), Loader=HassYamlLoader)
+        except UnicodeDecodeError:
+            continue
         except Exception as exc:
             errors.append(f"{rel}: {exc}")
     return errors
