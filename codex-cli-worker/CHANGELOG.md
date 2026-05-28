@@ -6,6 +6,7 @@
 - Improved Codex sign-in QR rendering by adding an explicit white QR background for dark Home Assistant themes.
 - Added a documented `dev` branch workflow for canary testing before stable releases.
 - Updated image publishing so manual branch builds do not move the `latest` image tag.
+- Improved worker discovery when stable and dev worker apps are installed side by side.
 
 ## 0.1.21
 
