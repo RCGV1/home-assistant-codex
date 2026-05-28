@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.31
+
+- Expose usage sensor `reset` attributes as ISO datetime strings and keep Codex's original human text in `reset_text` attributes.
+
 ## 0.1.30
 
 - Preserve reset times from the rich Codex `/status` panel when a later TUI footer redraw also contains 5-hour and weekly percentages without reset text.

@@ -184,7 +184,7 @@ The integration exposes these Home Assistant actions:
 - `codex_cli.cancel_task`
 - `codex_cli.reply_task`
 
-The integration also provides diagnostic sensors for auth status, active tasks, last task, and Codex 5-hour and weekly usage limits. The usage sensors expose numeric percent states plus reset attributes when Codex reports them in `/status`.
+The integration also provides diagnostic sensors for auth status, active tasks, last task, and Codex 5-hour and weekly usage limits. The usage sensors expose numeric percent states plus ISO datetime reset attributes when Codex reports reset times in `/status`.
 
 Example:
 
