@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import EntityCategory, PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -141,14 +141,19 @@ class CodexFiveHourLimitSensor(_CodexSensor):
 
     _attr_icon = "mdi:timer-sand"
     _attr_translation_key = "five_hour_limit"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, "five_hour_limit")
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> int | None:
         usage = (self.coordinator.data or {}).get("codex_usage") or {}
-        return str(usage.get("five_hour_limit") or "unavailable")
+        try:
+            return int(str(usage.get("five_hour_percent") or ""))
+        except ValueError:
+            return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -157,8 +162,13 @@ class CodexFiveHourLimitSensor(_CodexSensor):
             "usage_status": usage.get("status"),
             "updated_at": usage.get("updated_at"),
             "error": usage.get("error"),
+            "limit": usage.get("five_hour_limit"),
+            "reset": usage.get("five_hour_reset"),
             "weekly_limit": usage.get("weekly_limit"),
+            "weekly_percent": usage.get("weekly_percent"),
+            "weekly_reset": usage.get("weekly_reset"),
             "context_remaining": usage.get("context_remaining"),
+            "context_percent": usage.get("context_percent"),
             "raw_excerpt": usage.get("raw_excerpt"),
         }
 
@@ -168,14 +178,19 @@ class CodexWeeklyLimitSensor(_CodexSensor):
 
     _attr_icon = "mdi:calendar-week"
     _attr_translation_key = "weekly_limit"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, "weekly_limit")
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> int | None:
         usage = (self.coordinator.data or {}).get("codex_usage") or {}
-        return str(usage.get("weekly_limit") or "unavailable")
+        try:
+            return int(str(usage.get("weekly_percent") or ""))
+        except ValueError:
+            return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -184,7 +199,12 @@ class CodexWeeklyLimitSensor(_CodexSensor):
             "usage_status": usage.get("status"),
             "updated_at": usage.get("updated_at"),
             "error": usage.get("error"),
+            "limit": usage.get("weekly_limit"),
+            "reset": usage.get("weekly_reset"),
             "five_hour_limit": usage.get("five_hour_limit"),
+            "five_hour_percent": usage.get("five_hour_percent"),
+            "five_hour_reset": usage.get("five_hour_reset"),
             "context_remaining": usage.get("context_remaining"),
+            "context_percent": usage.get("context_percent"),
             "raw_excerpt": usage.get("raw_excerpt"),
         }

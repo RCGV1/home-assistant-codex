@@ -68,9 +68,16 @@ UUID_RE = re.compile(
 URL_RE = re.compile(r"https?://[^\s<>)\"']+")
 DEVICE_CODE_RE = re.compile(r"\b[A-Z0-9]{4,}(?:-[A-Z0-9]{4,})+\b")
 ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|[PX^_].*?\x1b\\|[@-Z\\-_])")
-FIVE_HOUR_RE = re.compile(r"(?i)(?<!\w)(?:5\s*h|5\s*-\s*hour|five\s*-\s*hour|five\s+hour)\s+\d{1,3}%(?!\d)")
-WEEKLY_RE = re.compile(r"(?i)(?<!\w)weekly\s+\d{1,3}%(?!\d)")
-CONTEXT_RE = re.compile(r"(?i)(?<!\w)context\s+\d{1,3}%\s+left\b")
+FIVE_HOUR_RE = re.compile(
+    r"(?i)(?<!\w)(?:5\s*h(?:\s+limit)?|5\s*-\s*hour|five\s*-\s*hour|five\s+hour)"
+    r"(?::)?(?:\s+\[[^\]]+\])?\s+(?P<percent>\d{1,3})%(?:\s+left)?"
+    r"(?:\s+\(resets\s+(?P<reset>[^)]+)\))?"
+)
+WEEKLY_RE = re.compile(
+    r"(?i)(?<!\w)weekly(?:\s+limit)?(?::)?(?:\s+\[[^\]]+\])?\s+"
+    r"(?P<percent>\d{1,3})%(?:\s+left)?(?:\s+\(resets\s+(?P<reset>[^)]+)\))?"
+)
+CONTEXT_RE = re.compile(r"(?i)(?<!\w)context\s+(?P<percent>\d{1,3})%\s+left\b")
 
 EXCLUDED_PARTS = {
     ".cache",
@@ -340,19 +347,37 @@ def _parse_usage_output(text: str) -> dict[str, str]:
     cleaned = clean_cli_text(text)
     lines = [" ".join(line.strip().split()) for line in cleaned.splitlines() if line.strip()]
     five_hour = ""
+    five_hour_percent = ""
+    five_hour_reset = ""
     weekly = ""
+    weekly_percent = ""
+    weekly_reset = ""
     context = ""
+    context_percent = ""
     for line in lines:
-        if matches := FIVE_HOUR_RE.findall(line):
-            five_hour = matches[-1]
-        if matches := WEEKLY_RE.findall(line):
-            weekly = matches[-1]
-        if matches := CONTEXT_RE.findall(line):
-            context = matches[-1]
+        if matches := list(FIVE_HOUR_RE.finditer(line)):
+            match = matches[-1]
+            five_hour_percent = match.group("percent")
+            five_hour_reset = match.group("reset") or ""
+            five_hour = f"5h {five_hour_percent}%"
+        if matches := list(WEEKLY_RE.finditer(line)):
+            match = matches[-1]
+            weekly_percent = match.group("percent")
+            weekly_reset = match.group("reset") or ""
+            weekly = f"weekly {weekly_percent}%"
+        if matches := list(CONTEXT_RE.finditer(line)):
+            match = matches[-1]
+            context_percent = match.group("percent")
+            context = f"Context {context_percent}% left"
     return {
         "five_hour_limit": five_hour,
+        "five_hour_percent": five_hour_percent,
+        "five_hour_reset": five_hour_reset,
         "weekly_limit": weekly,
+        "weekly_percent": weekly_percent,
+        "weekly_reset": weekly_reset,
         "context_remaining": context,
+        "context_percent": context_percent,
         "raw_excerpt": "\n".join(lines[-25:]),
     }
 
@@ -381,8 +406,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "status": "deferred",
             "error": "A Codex task is running; usage refresh is deferred until it finishes.",
             "five_hour_limit": usage_status_payload().get("five_hour_limit", ""),
+            "five_hour_percent": usage_status_payload().get("five_hour_percent", ""),
+            "five_hour_reset": usage_status_payload().get("five_hour_reset", ""),
             "weekly_limit": usage_status_payload().get("weekly_limit", ""),
+            "weekly_percent": usage_status_payload().get("weekly_percent", ""),
+            "weekly_reset": usage_status_payload().get("weekly_reset", ""),
             "context_remaining": usage_status_payload().get("context_remaining", ""),
+            "context_percent": usage_status_payload().get("context_percent", ""),
             "raw_excerpt": usage_status_payload().get("raw_excerpt", ""),
         }
     codex = shutil.which("codex")
@@ -391,8 +421,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "status": "unavailable",
             "error": "codex binary not found",
             "five_hour_limit": "",
+            "five_hour_percent": "",
+            "five_hour_reset": "",
             "weekly_limit": "",
+            "weekly_percent": "",
+            "weekly_reset": "",
             "context_remaining": "",
+            "context_percent": "",
             "raw_excerpt": "",
         }
     login = codex_login_status()
@@ -401,8 +436,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "status": "unavailable",
             "error": "Not logged in",
             "five_hour_limit": "",
+            "five_hour_percent": "",
+            "five_hour_reset": "",
             "weekly_limit": "",
+            "weekly_percent": "",
+            "weekly_reset": "",
             "context_remaining": "",
+            "context_percent": "",
             "raw_excerpt": "",
         }
     try:
@@ -415,8 +455,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "status": "unavailable",
             "error": f"pty support unavailable: {exc}",
             "five_hour_limit": "",
+            "five_hour_percent": "",
+            "five_hour_reset": "",
             "weekly_limit": "",
+            "weekly_percent": "",
+            "weekly_reset": "",
             "context_remaining": "",
+            "context_percent": "",
             "raw_excerpt": "",
         }
 
@@ -458,8 +503,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "status": "error",
             "error": str(exc),
             "five_hour_limit": "",
+            "five_hour_percent": "",
+            "five_hour_reset": "",
             "weekly_limit": "",
+            "weekly_percent": "",
+            "weekly_reset": "",
             "context_remaining": "",
+            "context_percent": "",
             "raw_excerpt": "",
         }
     finally:

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.27
+
+- Make the 5-hour and weekly usage sensors numeric percentage sensors.
+- Parse reset text from richer Codex `/status` output when available and expose it as sensor attributes.
+
 ## 0.1.26
 
 - Parse concise Codex usage values from TUI redraw output instead of storing an overlong terminal line.
