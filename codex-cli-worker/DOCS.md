@@ -58,6 +58,12 @@ The app uses the built-in Supervisor token for Home Assistant notifications and 
 
 Codex CLI sign-in uses your ChatGPT/OpenAI account. It may work with a free ChatGPT account, but ChatGPT Plus or higher is recommended for more reasonable usage limits. This project does not use OpenAI API keys for Codex tasks.
 
+## Usage Status
+
+The worker performs a best-effort interactive probe of Codex CLI usage by starting a pseudo-terminal session and running `/status`. It extracts the visible `5-hour` and `Weekly` lines and exposes them through the worker `/status` payload, which the integration surfaces as sensors.
+
+Because Codex does not currently provide a stable non-interactive usage command, these values may temporarily show as unavailable if the interactive output is delayed or does not include the limits yet.
+
 ## Notifications
 
 Leave `notify_service` unset or empty to use Home Assistant persistent notifications for task completion, failures, and questions. If you want push notifications, set it to a Home Assistant notify service such as `notify.mobile_app_your_phone`.

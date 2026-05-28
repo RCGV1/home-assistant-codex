@@ -21,6 +21,8 @@ There is no worker URL or API token to enter.
 ## Entities
 
 - Auth status: Shows whether Codex CLI is signed in.
+- 5-hour limit: Shows the latest Codex interactive usage line for the 5-hour window.
+- Weekly limit: Shows the latest Codex interactive usage line for the weekly window.
 - Active tasks: Shows the number of currently running Codex tasks.
 - Last task: Shows the latest known task status and related attributes.
 - Task running: Binary sensor that is on while a task is active.
@@ -67,3 +69,4 @@ The integration polls the worker every 30 seconds. Actions that start, cancel, o
 
 - This integration controls a single local Codex CLI Worker instance.
 - It depends on the worker add-on for task execution, Codex authentication, and notification delivery.
+- Usage-limit sensors are best-effort values parsed from interactive Codex `/status` output and can temporarily be unavailable.

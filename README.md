@@ -184,6 +184,8 @@ The integration exposes these Home Assistant actions:
 - `codex_cli.cancel_task`
 - `codex_cli.reply_task`
 
+The integration also provides diagnostic sensors for auth status, active tasks, last task, and best-effort Codex usage lines for the 5-hour and weekly limits.
+
 Example:
 
 ```yaml

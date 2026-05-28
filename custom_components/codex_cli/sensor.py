@@ -29,6 +29,8 @@ async def async_setup_entry(
             CodexLastTaskSensor(coordinator, entry),
             CodexTaskCountSensor(coordinator, entry),
             CodexAuthSensor(coordinator, entry),
+            CodexFiveHourLimitSensor(coordinator, entry),
+            CodexWeeklyLimitSensor(coordinator, entry),
         ]
     )
 
@@ -131,4 +133,56 @@ class CodexAuthSensor(_CodexSensor):
             "verification_url": auth_flow.get("verification_url"),
             "user_code": auth_flow.get("user_code"),
             "qr_url": auth_flow.get("qr_url"),
+        }
+
+
+class CodexFiveHourLimitSensor(_CodexSensor):
+    """Show Codex 5-hour usage line from interactive status."""
+
+    _attr_icon = "mdi:timer-sand"
+    _attr_translation_key = "five_hour_limit"
+
+    def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "five_hour_limit")
+
+    @property
+    def native_value(self) -> str:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return str(usage.get("five_hour_limit") or "unavailable")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return {
+            "usage_status": usage.get("status"),
+            "updated_at": usage.get("updated_at"),
+            "error": usage.get("error"),
+            "weekly_limit": usage.get("weekly_limit"),
+            "context_remaining": usage.get("context_remaining"),
+        }
+
+
+class CodexWeeklyLimitSensor(_CodexSensor):
+    """Show Codex weekly usage line from interactive status."""
+
+    _attr_icon = "mdi:calendar-week"
+    _attr_translation_key = "weekly_limit"
+
+    def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "weekly_limit")
+
+    @property
+    def native_value(self) -> str:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return str(usage.get("weekly_limit") or "unavailable")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return {
+            "usage_status": usage.get("status"),
+            "updated_at": usage.get("updated_at"),
+            "error": usage.get("error"),
+            "five_hour_limit": usage.get("five_hour_limit"),
+            "context_remaining": usage.get("context_remaining"),
         }

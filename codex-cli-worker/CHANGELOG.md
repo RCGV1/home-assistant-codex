@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.23
+
+- Added best-effort interactive usage probing through a pseudo-terminal to collect Codex `/status` usage lines.
+- Exposed parsed 5-hour and weekly usage lines in worker `/status` responses.
+- Added integration sensors for 5-hour and weekly usage status lines.
+- Refresh usage status on startup (when logged in), after tasks finish, after login completes, and via periodic status polling.
+
 ## 0.1.22
 
 - Added logout support through the worker web UI and the `codex_cli.logout` Home Assistant action.

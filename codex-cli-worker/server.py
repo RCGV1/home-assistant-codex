@@ -9,6 +9,7 @@ import json
 import os
 import queue
 import re
+import select
 import secrets
 import shutil
 import signal
@@ -57,12 +58,18 @@ LOG_TAIL_BYTES = 300_000
 AUTH_NOTIFY_ID = "codex_cli_login"
 AUTH_QR_DIR = CONFIG_ROOT / "www" / "codex_cli_auth"
 INGRESS_PROXY_IP = "172.30.32.2"
+USAGE_REFRESH_INTERVAL_SECONDS = 300
+USAGE_READY_TIMEOUT_SECONDS = 8
+USAGE_CAPTURE_TIMEOUT_SECONDS = 12
 UUID_RE = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
 )
 URL_RE = re.compile(r"https?://[^\s<>)\"']+")
 DEVICE_CODE_RE = re.compile(r"\b[A-Z0-9]{4,}(?:-[A-Z0-9]{4,})+\b")
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+FIVE_HOUR_RE = re.compile(r"(?i)\b(?:5h|5-hour|five[- ]hour)\b[^\n]*")
+WEEKLY_RE = re.compile(r"(?i)\bweekly\b[^\n]*")
+CONTEXT_RE = re.compile(r"(?i)\bcontext\b[^\n]*")
 
 EXCLUDED_PARTS = {
     ".cache",
@@ -112,6 +119,18 @@ running_processes: dict[str, subprocess.Popen] = {}
 auth_state: dict[str, Any] = {}
 auth_process: subprocess.Popen | None = None
 event_queue: "queue.Queue[tuple[str, str]]" = queue.Queue()
+usage_lock = threading.RLock()
+usage_state: dict[str, Any] = {
+    "status": "unavailable",
+    "updated_at": "",
+    "five_hour_limit": "",
+    "weekly_limit": "",
+    "context_remaining": "",
+    "raw_excerpt": "",
+    "error": "",
+    "_updated_monotonic": 0.0,
+    "_refreshing": False,
+}
 
 
 @app.before_request
@@ -279,6 +298,167 @@ def redact(text: str) -> str:
 def clean_cli_text(text: str) -> str:
     """Remove ANSI escapes and normalize Codex CLI output."""
     return ANSI_RE.sub("", text).replace("\r", "\n")
+
+
+def usage_status_payload() -> dict[str, Any]:
+    with usage_lock:
+        return {k: v for k, v in usage_state.items() if not k.startswith("_")}
+
+
+def _update_usage_state(**updates: Any) -> None:
+    with usage_lock:
+        usage_state.update(updates)
+        usage_state["updated_at"] = utc_now()
+        usage_state["_updated_monotonic"] = time.monotonic()
+
+
+def _read_pty(master_fd: int, timeout_seconds: float) -> str:
+    chunks: list[str] = []
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        wait_for = max(0.0, min(0.25, deadline - time.monotonic()))
+        readable, _, _ = select.select([master_fd], [], [], wait_for)
+        if not readable:
+            continue
+        try:
+            data = os.read(master_fd, 65536)
+        except OSError:
+            break
+        if not data:
+            break
+        chunks.append(data.decode("utf-8", errors="replace"))
+    return "".join(chunks)
+
+
+def _parse_usage_output(text: str) -> dict[str, str]:
+    cleaned = clean_cli_text(text)
+    lines = [" ".join(line.strip().split()) for line in cleaned.splitlines() if line.strip()]
+    five_hour = ""
+    weekly = ""
+    context = ""
+    for line in lines:
+        if FIVE_HOUR_RE.search(line):
+            five_hour = line
+        if WEEKLY_RE.search(line):
+            weekly = line
+        if CONTEXT_RE.search(line):
+            context = line
+    return {
+        "five_hour_limit": five_hour,
+        "weekly_limit": weekly,
+        "context_remaining": context,
+        "raw_excerpt": "\n".join(lines[-25:]),
+    }
+
+
+def fetch_codex_usage_status() -> dict[str, Any]:
+    codex = shutil.which("codex")
+    if not codex:
+        return {
+            "status": "unavailable",
+            "error": "codex binary not found",
+            "five_hour_limit": "",
+            "weekly_limit": "",
+            "context_remaining": "",
+            "raw_excerpt": "",
+        }
+    login = codex_login_status()
+    if not login.get("status_ok"):
+        return {
+            "status": "unavailable",
+            "error": "Not logged in",
+            "five_hour_limit": "",
+            "weekly_limit": "",
+            "context_remaining": "",
+            "raw_excerpt": "",
+        }
+    try:
+        import pty
+    except Exception as exc:
+        return {
+            "status": "unavailable",
+            "error": f"pty module unavailable: {exc}",
+            "five_hour_limit": "",
+            "weekly_limit": "",
+            "context_remaining": "",
+            "raw_excerpt": "",
+        }
+
+    master_fd, slave_fd = pty.openpty()
+    proc: subprocess.Popen[bytes] | None = None
+    try:
+        proc = subprocess.Popen(
+            [codex, "--no-alt-screen"],
+            cwd="/config",
+            env=codex_env(),
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            close_fds=True,
+        )
+        os.close(slave_fd)
+        slave_fd = -1
+        initial = _read_pty(master_fd, USAGE_READY_TIMEOUT_SECONDS)
+        if "codex" not in initial.lower() and "status" not in initial.lower():
+            # Continue anyway; some terminals render minimal startup text.
+            pass
+        os.write(master_fd, b"/status\r")
+        status_text = _read_pty(master_fd, USAGE_CAPTURE_TIMEOUT_SECONDS)
+        os.write(master_fd, b"/quit\r")
+        parsed = _parse_usage_output(status_text)
+        if not parsed["five_hour_limit"] and not parsed["weekly_limit"]:
+            return {
+                "status": "error",
+                "error": "Codex usage limits were not visible in /status output yet",
+                **parsed,
+            }
+        return {"status": "ok", "error": "", **parsed}
+    except Exception as exc:
+        return {
+            "status": "error",
+            "error": str(exc),
+            "five_hour_limit": "",
+            "weekly_limit": "",
+            "context_remaining": "",
+            "raw_excerpt": "",
+        }
+    finally:
+        try:
+            os.close(master_fd)
+        except Exception:
+            pass
+        if slave_fd >= 0:
+            try:
+                os.close(slave_fd)
+            except Exception:
+                pass
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except Exception:
+                proc.kill()
+
+
+def _refresh_usage_worker(force: bool = False) -> None:
+    with usage_lock:
+        if usage_state.get("_refreshing"):
+            return
+        if not force:
+            last = float(usage_state.get("_updated_monotonic") or 0.0)
+            if last and (time.monotonic() - last) < USAGE_REFRESH_INTERVAL_SECONDS:
+                return
+        usage_state["_refreshing"] = True
+
+    result = fetch_codex_usage_status()
+    _update_usage_state(**result)
+    with usage_lock:
+        usage_state["_refreshing"] = False
+
+
+def refresh_usage_status_async(force: bool = False) -> None:
+    thread = threading.Thread(target=_refresh_usage_worker, args=(force,), daemon=True)
+    thread.start()
 
 
 def write_task_log(task_id: str, stream: str, text: str) -> None:
@@ -810,6 +990,7 @@ def run_codex_device_login(login_id: str) -> None:
         update_auth_state(status="completed", completed_at=utc_now(), returncode=returncode)
         dismiss_persistent_notification(AUTH_NOTIFY_ID)
         notify("Codex sign-in complete", "Codex CLI is now authenticated for the Home Assistant worker.")
+        refresh_usage_status_async(force=True)
     else:
         update_auth_state(status="failed", completed_at=utc_now(), returncode=returncode)
         notify("Codex sign-in failed", f"Device login exited with code {returncode}.")
@@ -886,6 +1067,7 @@ def logout_codex() -> dict[str, Any]:
             error="",
         )
         notify("Codex signed out", "Codex CLI credentials were removed from the Home Assistant worker.")
+        refresh_usage_status_async(force=True)
         return {"ok": True, "message": message, "status": auth_status_payload()}
     update_auth_state(status="logout_failed", completed_at=utc_now(), returncode=proc.returncode, error=message)
     return {"ok": False, "error": message or f"codex logout exited with code {proc.returncode}", "status": auth_status_payload()}
@@ -895,6 +1077,7 @@ def auto_start_login_if_needed() -> None:
     status = codex_login_status()
     if status.get("status_ok"):
         update_auth_state(status="authenticated", message=status.get("message", ""))
+        refresh_usage_status_async(force=False)
         return
     print("Codex is not authenticated; starting device-code login flow.", flush=True)
     start_codex_login_flow(False)
@@ -1157,6 +1340,7 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
         notify("Codex task completed", f"{final.get('summary', 'Done')} Task: {task_id}")
     else:
         notify("Codex task failed", f"{final.get('summary', 'Failed')} Task: {task_id}")
+    refresh_usage_status_async(force=True)
 
 
 def start_background_task(task_id: str, prompt: str, session_id: str | None = None, reply: str | None = None) -> None:
@@ -1306,6 +1490,7 @@ def health() -> Response:
 @app.get("/status")
 @require_auth
 def status() -> Response:
+    refresh_usage_status_async(force=False)
     with lock:
         task_values = list(tasks.values())
     return jsonify(
@@ -1318,6 +1503,7 @@ def status() -> Response:
             "latest_task": task_values[-1] if task_values else None,
             "codex_login": codex_login_status(),
             "auth_flow": auth_status_payload(),
+            "codex_usage": usage_status_payload(),
         }
     )
 

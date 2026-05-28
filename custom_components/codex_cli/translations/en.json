@@ -36,6 +36,12 @@
       },
       "auth_status": {
         "name": "Auth status"
+      },
+      "five_hour_limit": {
+        "name": "5-hour limit"
+      },
+      "weekly_limit": {
+        "name": "Weekly limit"
       }
     },
     "binary_sensor": {
