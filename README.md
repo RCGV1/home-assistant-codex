@@ -108,7 +108,7 @@ The app sends a Home Assistant persistent notification with:
 
 Scan the QR code or open the link, then enter the device code shown in the notification.
 
-Codex CLI sign-in uses your OpenAI subscription. This project does not use OpenAI API keys for Codex tasks.
+Codex CLI sign-in uses your ChatGPT/OpenAI account. It may work with a free ChatGPT account, but **ChatGPT Plus or higher is recommended** for more reasonable usage limits. This project does not use OpenAI API keys for Codex tasks.
 
 ### 4. Install the Custom Integration
 
