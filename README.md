@@ -45,6 +45,14 @@ The packaged worker follows the current Home Assistant app security guidance:
 
 The `/config` mount is intentionally read-write because editing Home Assistant configuration is the core purpose of the project.
 
+## Disclaimer
+
+Use this project at your own risk. Codex for Home Assistant can read and modify your Home Assistant configuration, dashboards, scripts, automations, and related files. AI-generated changes can be incomplete, incorrect, unsafe, or incompatible with your setup.
+
+You are solely responsible for reviewing changes, keeping backups, testing safely, and deciding whether to run this tool in your environment. The maintainer is not responsible or liable for damage, data loss, service interruption, security issues, misconfiguration, broken automations, device behavior, or any other loss or claim arising from installing, configuring, or using this project.
+
+This project is provided "as is", without warranty of any kind, express or implied. See the repository license for the full warranty and liability disclaimer.
+
 ## Supported Architectures
 
 Prebuilt app images are published for:
