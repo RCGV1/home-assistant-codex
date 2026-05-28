@@ -352,6 +352,15 @@ def _parse_usage_output(text: str) -> dict[str, str]:
 
 
 def fetch_codex_usage_status() -> dict[str, Any]:
+    if active_task_id():
+        return {
+            "status": "deferred",
+            "error": "A Codex task is running; usage refresh is deferred until it finishes.",
+            "five_hour_limit": usage_status_payload().get("five_hour_limit", ""),
+            "weekly_limit": usage_status_payload().get("weekly_limit", ""),
+            "context_remaining": usage_status_payload().get("context_remaining", ""),
+            "raw_excerpt": usage_status_payload().get("raw_excerpt", ""),
+        }
     codex = shutil.which("codex")
     if not codex:
         return {
@@ -374,10 +383,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
         }
     try:
         import pty
+        import fcntl
+        import struct
+        import termios
     except Exception as exc:
         return {
             "status": "unavailable",
-            "error": f"pty module unavailable: {exc}",
+            "error": f"pty support unavailable: {exc}",
             "five_hour_limit": "",
             "weekly_limit": "",
             "context_remaining": "",
@@ -387,10 +399,13 @@ def fetch_codex_usage_status() -> dict[str, Any]:
     master_fd, slave_fd = pty.openpty()
     proc: subprocess.Popen[bytes] | None = None
     try:
+        env = codex_env()
+        env.setdefault("TERM", "xterm-256color")
+        fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 160, 0, 0))
         proc = subprocess.Popen(
             [codex, "--no-alt-screen"],
             cwd="/config",
-            env=codex_env(),
+            env=env,
             stdin=slave_fd,
             stdout=slave_fd,
             stderr=slave_fd,
@@ -404,7 +419,10 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             pass
         os.write(master_fd, b"/status\r")
         status_text = _read_pty(master_fd, USAGE_CAPTURE_TIMEOUT_SECONDS)
-        os.write(master_fd, b"/quit\r")
+        try:
+            os.write(master_fd, b"/quit\r")
+        except OSError:
+            pass
         parsed = _parse_usage_output(status_text)
         if not parsed["five_hour_limit"] and not parsed["weekly_limit"]:
             return {
@@ -450,10 +468,12 @@ def _refresh_usage_worker(force: bool = False) -> None:
                 return
         usage_state["_refreshing"] = True
 
-    result = fetch_codex_usage_status()
-    _update_usage_state(**result)
-    with usage_lock:
-        usage_state["_refreshing"] = False
+    try:
+        result = fetch_codex_usage_status()
+        _update_usage_state(**result)
+    finally:
+        with usage_lock:
+            usage_state["_refreshing"] = False
 
 
 def refresh_usage_status_async(force: bool = False) -> None:

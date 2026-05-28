@@ -6,6 +6,7 @@
 - Exposed parsed 5-hour and weekly usage lines in worker `/status` responses.
 - Added integration sensors for 5-hour and weekly usage status lines.
 - Refresh usage status on startup (when logged in), after tasks finish, after login completes, and via periodic status polling.
+- Hardened the usage probe so it uses a stable terminal size, defers while tasks are running, and preserves captured output if the TUI exits quickly.
 
 ## 0.1.22
 
