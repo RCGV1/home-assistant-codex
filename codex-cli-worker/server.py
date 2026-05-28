@@ -61,13 +61,14 @@ INGRESS_PROXY_IP = "172.30.32.2"
 USAGE_REFRESH_INTERVAL_SECONDS = 300
 USAGE_READY_TIMEOUT_SECONDS = 8
 USAGE_STATUS_TIMEOUT_SECONDS = 25
+USAGE_POST_TRUST_READY_SECONDS = 10
 UUID_RE = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
 )
 URL_RE = re.compile(r"https?://[^\s<>)\"']+")
 DEVICE_CODE_RE = re.compile(r"\b[A-Z0-9]{4,}(?:-[A-Z0-9]{4,})+\b")
-ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
-FIVE_HOUR_RE = re.compile(r"(?i)\b(?:5h|5-hour|five[- ]hour)\b[^\n]*")
+ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|[PX^_].*?\x1b\\|[@-Z\\-_])")
+FIVE_HOUR_RE = re.compile(r"(?i)\b(?:5[- ]?(?:h|hour)|five[- ]hour)\b[^\n]*")
 WEEKLY_RE = re.compile(r"(?i)\bweekly\b[^\n]*")
 CONTEXT_RE = re.compile(r"(?i)\bcontext\b[^\n]*")
 
@@ -300,6 +301,11 @@ def clean_cli_text(text: str) -> str:
     return ANSI_RE.sub("", text).replace("\r", "\n")
 
 
+def compact_cli_text(text: str) -> str:
+    """Return CLI output normalized for prompt detection across TUI layout noise."""
+    return re.sub(r"[^a-z0-9]+", "", clean_cli_text(text).casefold())
+
+
 def usage_status_payload() -> dict[str, Any]:
     with usage_lock:
         return {k: v for k, v in usage_state.items() if not k.startswith("_")}
@@ -355,9 +361,9 @@ def _capture_status_from_tui(master_fd: int) -> str:
     captured = _read_pty(master_fd, USAGE_READY_TIMEOUT_SECONDS)
 
     # First-run Codex can pause on the trust-directory screen before accepting slash commands.
-    if "do you trust the contents of this directory" in captured.lower():
+    if "doyoutrustthecontentsofthisdirectory" in compact_cli_text(captured):
         os.write(master_fd, b"1\r")
-        captured += _read_pty(master_fd, 3.0)
+        captured += _read_pty(master_fd, USAGE_POST_TRUST_READY_SECONDS)
 
     os.write(master_fd, b"/status\r")
     deadline = time.monotonic() + USAGE_STATUS_TIMEOUT_SECONDS
@@ -420,8 +426,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
         env = codex_env()
         env.setdefault("TERM", "xterm-256color")
         fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 160, 0, 0))
+        status_line_config = (
+            'tui.status_line=["model-with-reasoning","context-remaining","five-hour-limit","weekly-limit"]'
+        )
         proc = subprocess.Popen(
-            [codex, "--no-alt-screen"],
+            [codex, "--no-alt-screen", "--config", status_line_config],
             cwd="/config",
             env=env,
             stdin=slave_fd,

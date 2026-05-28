@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.25
+
+- Detect Codex CLI's trust-directory prompt even when TUI control sequences remove spacing.
+- Wait briefly after accepting directory trust before sending `/status`.
+- Request Codex's five-hour and weekly limit status-line items during the usage probe.
+
 ## 0.1.24
 
 - Handle Codex CLI's trust-directory prompt before sending `/status` in the usage probe.
