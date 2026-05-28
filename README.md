@@ -16,6 +16,16 @@ This repository contains two pieces:
 - Reports active task count, latest task status, auth status, and task-running state.
 - Uses Home Assistant Ingress for the app UI; the worker HTTP port is not exposed to the LAN.
 
+## Example Flow
+
+Ask Home Assistant Assist to make a configuration or dashboard change:
+
+<img src="examples/codex-1.JPG" alt="Home Assistant Assist starting a Codex task to update a dashboard card label" width="560">
+
+Codex runs the task and sends a Home Assistant notification when it finishes:
+
+<img src="examples/codex-2.JPG" alt="Home Assistant persistent notification confirming a completed Codex task" width="560">
+
 ## Security Notes
 
 This app is powerful by design. It gives Codex access to your Home Assistant config folder so it can edit automations, scripts, dashboards, integrations, and related files.
