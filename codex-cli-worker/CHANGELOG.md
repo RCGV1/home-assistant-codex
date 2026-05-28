@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.21
+
+- Ignore binary Home Assistant storage helper files such as `.pickle` and `.pkl` when building task snapshots.
+- Do not fail completed Codex tasks when unrelated binary `.storage` files change during validation.
+
+## 0.1.20
+
+- Added the `model_reasoning_effort` app option with a dropdown for `minimal`, `low`, `medium`, `high`, and `xhigh`.
+- Pass the selected reasoning effort to every `codex exec` run using the per-run Codex CLI config override.
+- Documented the reasoning effort choices and their speed/quota tradeoffs.
+
+## 0.1.19
+
+- Clarified that ChatGPT Free may work, but ChatGPT Plus or higher is recommended for more practical Codex usage limits.
+- Added Assist workflow screenshots to the README.
+
+## 0.1.18
+
+- Improved the README installation flow with contextual Home Assistant and HACS buttons.
+- Added a direct sign-in link below the QR code so Codex authentication can be completed from one device.
+- Simplified task starts so prompts no longer require a separate title.
+
 ## 0.1.17
 
 - Always provision a fresh in-memory worker API token from the integration instead of reusing stale legacy app option values.
