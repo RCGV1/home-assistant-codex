@@ -698,9 +698,9 @@ def notify_codex_login_ready(login_id: str, url: str, code: str) -> str:
     message = (
         "Scan the QR code below, or open the sign-in link, to authorize Codex CLI "
         "for the Home Assistant worker. The QR code opens the device page; type the code from this notification into that page.\n\n"
-        f"[Open Codex sign-in]({url})"
-        f"{code_line}\n\n"
         f"![Codex login QR]({qr_url})\n\n"
+        f"[Open sign-in page]({url})"
+        f"{code_line}\n\n"
         "After you approve it, the worker will detect completion automatically."
     )
     title = "Codex CLI sign-in code" if code else "Codex CLI sign-in"
@@ -1155,9 +1155,9 @@ function renderLoginCard(auth) {{
   const card = document.getElementById('login-card');
   if (!card || !auth) return;
   const qr = auth.qr_url ? '<p><img src="' + auth.qr_url + '" alt="Codex login QR" style="max-width:260px;background:white;padding:12px;border:1px solid #d6dde8;border-radius:8px"></p>' : '';
-  const link = auth.verification_url ? '<p><a href="' + auth.verification_url + '" target="_blank" rel="noreferrer">Open Codex sign-in</a></p>' : '';
+  const link = auth.verification_url ? '<p><a href="' + auth.verification_url + '" target="_blank" rel="noreferrer">Open sign-in page</a></p>' : '';
   const code = auth.user_code ? '<p>Device code: <code>' + auth.user_code + '</code></p>' : '';
-  card.innerHTML = '<p>Status: <strong>' + (auth.status || 'unknown') + '</strong></p>' + link + code + qr;
+  card.innerHTML = '<p>Status: <strong>' + (auth.status || 'unknown') + '</strong></p>' + qr + link + code;
 }}
 async function refreshLoginStatus() {{
   const result = document.getElementById('login-result');
