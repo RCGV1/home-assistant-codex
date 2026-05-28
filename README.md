@@ -44,19 +44,13 @@ Prebuilt app images are published for:
 
 ## Installation
 
-### Quick Install
-
-Use these buttons to jump directly into the relevant Home Assistant pages:
+### 1. Add the Worker App Repository
 
 [![Add the Codex app repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmoryoav%2Fhome-assistant-codex)
 
-[![Open the Codex CLI Worker app page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=8a8d906b_codex_cli_worker&repository_url=https%3A%2F%2Fgithub.com%2Fmoryoav%2Fhome-assistant-codex)
+Use the button above to add this repository to Home Assistant's Apps store.
 
-[![Open the Codex HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moryoav&repository=home-assistant-codex&category=integration)
-
-[![Add the Codex integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=codex_cli)
-
-### 1. Install the Worker App
+If you prefer to do it manually:
 
 In Home Assistant:
 
@@ -69,11 +63,13 @@ In Home Assistant:
 https://github.com/moryoav/home-assistant-codex
 ```
 
-Then install **Codex CLI Worker** from the Apps store.
+### 2. Install and Start the Worker App
 
-### 2. Start the Worker App
+[![Open the Codex CLI Worker app page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=8a8d906b_codex_cli_worker&repository_url=https%3A%2F%2Fgithub.com%2Fmoryoav%2Fhome-assistant-codex)
 
-1. Open **Codex CLI Worker**.
+Use the button above after adding the repository. It opens the **Codex CLI Worker** app page.
+
+1. Install **Codex CLI Worker**.
 2. Review the app options.
 3. Start the app.
 
@@ -108,6 +104,12 @@ Codex CLI sign-in uses your OpenAI subscription. This project does not use OpenA
 
 #### HACS
 
+[![Open the Codex HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moryoav&repository=home-assistant-codex&category=integration)
+
+Use the button above to add and open the Codex custom repository in HACS.
+
+If you prefer to do it manually:
+
 1. Open HACS.
 2. Add a custom repository.
 3. Use this URL:
@@ -137,6 +139,10 @@ to:
 Then restart Home Assistant.
 
 ### 5. Add the Integration
+
+[![Add the Codex integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=codex_cli)
+
+Use the button above after Home Assistant restarts. It opens the **Codex** integration setup flow.
 
 In Home Assistant:
 
@@ -195,9 +201,3 @@ The app `config.yaml` points at that image. Home Assistant uses the app version 
 ├── repository.yaml
 └── hacs.json
 ```
-
-## References
-
-- Home Assistant app repositories require `repository.yaml` at the repository root.
-- Home Assistant recommends prebuilt app images for distribution.
-- App UI access should use Ingress rather than a published LAN port.
