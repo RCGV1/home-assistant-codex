@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.32
+
+- Added separate timestamp sensors for Codex 5-hour and weekly reset times.
+- Fire a `codex_cli_task_result` Home Assistant event whenever a Codex task completes, fails, or needs input. The event data includes the final Codex response and task metadata.
+
 ## 0.1.31
 
 - Expose usage sensor `reset` attributes as ISO datetime strings and keep Codex's original human text in `reset_text` attributes.

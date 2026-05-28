@@ -40,8 +40,14 @@
       "five_hour_limit": {
         "name": "5-hour limit"
       },
+      "five_hour_reset": {
+        "name": "5-hour reset"
+      },
       "weekly_limit": {
         "name": "Weekly limit"
+      },
+      "weekly_reset": {
+        "name": "Weekly reset"
       }
     },
     "binary_sensor": {

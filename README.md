@@ -184,7 +184,9 @@ The integration exposes these Home Assistant actions:
 - `codex_cli.cancel_task`
 - `codex_cli.reply_task`
 
-The integration also provides diagnostic sensors for auth status, active tasks, last task, and Codex 5-hour and weekly usage limits. The usage sensors expose numeric percent states plus ISO datetime reset attributes when Codex reports reset times in `/status`.
+The integration also provides diagnostic sensors for auth status, active tasks, last task, Codex 5-hour and weekly usage limits, and separate 5-hour/weekly reset timestamp sensors. The usage sensors expose numeric percent states plus ISO datetime reset attributes when Codex reports reset times in `/status`.
+
+When a Codex task completes, fails, or needs input, the worker fires a Home Assistant event named `codex_cli_task_result` in addition to the notification. Automations can listen for that event and read fields such as `task_id`, `status`, `summary`, `question`, `details`, and the nested `response` object from `trigger.event.data`.
 
 Example:
 

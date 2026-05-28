@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, PERCENTAGE
 from homeassistant.core import HomeAssistant
@@ -30,7 +31,9 @@ async def async_setup_entry(
             CodexTaskCountSensor(coordinator, entry),
             CodexAuthSensor(coordinator, entry),
             CodexFiveHourLimitSensor(coordinator, entry),
+            CodexFiveHourResetSensor(coordinator, entry),
             CodexWeeklyLimitSensor(coordinator, entry),
+            CodexWeeklyResetSensor(coordinator, entry),
         ]
     )
 
@@ -175,6 +178,48 @@ class CodexFiveHourLimitSensor(_CodexSensor):
         }
 
 
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed
+
+
+class CodexFiveHourResetSensor(_CodexSensor):
+    """Show when the Codex 5-hour usage limit resets."""
+
+    _attr_icon = "mdi:clock-time-five-outline"
+    _attr_translation_key = "five_hour_reset"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "five_hour_reset")
+
+    @property
+    def native_value(self) -> datetime | None:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return _parse_timestamp(usage.get("five_hour_reset_at"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return {
+            "usage_status": usage.get("status"),
+            "updated_at": usage.get("updated_at"),
+            "error": usage.get("error"),
+            "reset_text": usage.get("five_hour_reset"),
+            "limit": usage.get("five_hour_limit"),
+            "percent": usage.get("five_hour_percent"),
+        }
+
+
 class CodexWeeklyLimitSensor(_CodexSensor):
     """Show Codex weekly usage line from interactive status."""
 
@@ -211,4 +256,32 @@ class CodexWeeklyLimitSensor(_CodexSensor):
             "context_remaining": usage.get("context_remaining"),
             "context_percent": usage.get("context_percent"),
             "raw_excerpt": usage.get("raw_excerpt"),
+        }
+
+
+class CodexWeeklyResetSensor(_CodexSensor):
+    """Show when the Codex weekly usage limit resets."""
+
+    _attr_icon = "mdi:calendar-clock"
+    _attr_translation_key = "weekly_reset"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: CodexCliCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "weekly_reset")
+
+    @property
+    def native_value(self) -> datetime | None:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return _parse_timestamp(usage.get("weekly_reset_at"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        usage = (self.coordinator.data or {}).get("codex_usage") or {}
+        return {
+            "usage_status": usage.get("status"),
+            "updated_at": usage.get("updated_at"),
+            "error": usage.get("error"),
+            "reset_text": usage.get("weekly_reset"),
+            "limit": usage.get("weekly_limit"),
+            "percent": usage.get("weekly_percent"),
         }

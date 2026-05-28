@@ -947,6 +947,28 @@ def call_ha_service(service: str, data: dict[str, Any]) -> tuple[bool, str]:
     return False, "; ".join(errors)
 
 
+def fire_ha_event(event_type: str, data: dict[str, Any]) -> tuple[bool, str]:
+    token = ha_token()
+    if not token:
+        return False, "No Home Assistant token available"
+    url = ha_api_url(f"events/{event_type}")
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    attempts = [url]
+    if ha_token_source() == "supervisor" and not url.startswith("http://supervisor/core/api/"):
+        attempts.insert(0, f"http://supervisor/core/api/events/{event_type}")
+
+    errors: list[str] = []
+    for attempt_url in attempts:
+        try:
+            response = requests.post(attempt_url, headers=headers, json=data, timeout=15)
+            if response.status_code < 400:
+                return True, "ok"
+            errors.append(f"{attempt_url}: HTTP {response.status_code}: {response.text[:300]}")
+        except Exception as exc:
+            errors.append(f"{attempt_url}: {exc}")
+    return False, "; ".join(errors)
+
+
 def notify(title: str, message: str) -> None:
     service = str(read_options().get("notify_service") or "")
     if service:
@@ -1513,12 +1535,15 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
         final["status"] = "failed"
         final["details"] = "Validation errors: " + "; ".join(validation_errors[:5])
 
+    task_status = "waiting_for_input" if status == "needs_input" else status
+    completed_at = utc_now() if status != "needs_input" else ""
+    session_id = session_holder.get("session_id") or tasks.get(task_id, {}).get("session_id", "")
     update_task(
         task_id,
-        status="waiting_for_input" if status == "needs_input" else status,
-        completed_at=utc_now() if status != "needs_input" else "",
+        status=task_status,
+        completed_at=completed_at,
         returncode=returncode,
-        session_id=session_holder.get("session_id") or tasks.get(task_id, {}).get("session_id", ""),
+        session_id=session_id,
         summary=final.get("summary", ""),
         question=final.get("question", ""),
         details=final.get("details", ""),
@@ -1526,6 +1551,30 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
         validation_errors=validation_errors,
         lovelace_results=lovelace_results,
     )
+
+    event_data = {
+        "task_id": task_id,
+        "status": task_status,
+        "codex_status": status,
+        "summary": final.get("summary", ""),
+        "question": final.get("question", ""),
+        "details": final.get("details", ""),
+        "returncode": returncode,
+        "session_id": session_id,
+        "completed_at": completed_at,
+        "changes": changes,
+        "validation_errors": validation_errors,
+        "lovelace_results": lovelace_results,
+        "response": {
+            "status": status,
+            "summary": final.get("summary", ""),
+            "question": final.get("question", ""),
+            "details": final.get("details", ""),
+        },
+    }
+    ok, detail = fire_ha_event("codex_cli_task_result", event_data)
+    if not ok:
+        print(f"Codex task result event failed: {detail}", flush=True)
 
     if status == "needs_input":
         notify("Codex needs input", f"{final.get('question', 'Codex needs your input.')} Task: {task_id}")
