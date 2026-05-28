@@ -159,6 +159,7 @@ class CodexFiveHourLimitSensor(_CodexSensor):
             "error": usage.get("error"),
             "weekly_limit": usage.get("weekly_limit"),
             "context_remaining": usage.get("context_remaining"),
+            "raw_excerpt": usage.get("raw_excerpt"),
         }
 
 
@@ -185,4 +186,5 @@ class CodexWeeklyLimitSensor(_CodexSensor):
             "error": usage.get("error"),
             "five_hour_limit": usage.get("five_hour_limit"),
             "context_remaining": usage.get("context_remaining"),
+            "raw_excerpt": usage.get("raw_excerpt"),
         }

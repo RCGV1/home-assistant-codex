@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.24
+
+- Handle Codex CLI's trust-directory prompt before sending `/status` in the usage probe.
+- Parse the full captured TUI output when looking for usage lines.
+- Expose the usage probe `raw_excerpt` on the Home Assistant usage sensors for troubleshooting.
+
 ## 0.1.23
 
 - Added best-effort interactive usage probing through a pseudo-terminal to collect Codex `/status` usage lines.

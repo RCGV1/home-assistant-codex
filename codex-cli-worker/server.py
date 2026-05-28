@@ -60,7 +60,7 @@ AUTH_QR_DIR = CONFIG_ROOT / "www" / "codex_cli_auth"
 INGRESS_PROXY_IP = "172.30.32.2"
 USAGE_REFRESH_INTERVAL_SECONDS = 300
 USAGE_READY_TIMEOUT_SECONDS = 8
-USAGE_CAPTURE_TIMEOUT_SECONDS = 12
+USAGE_STATUS_TIMEOUT_SECONDS = 25
 UUID_RE = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
 )
@@ -351,6 +351,24 @@ def _parse_usage_output(text: str) -> dict[str, str]:
     }
 
 
+def _capture_status_from_tui(master_fd: int) -> str:
+    captured = _read_pty(master_fd, USAGE_READY_TIMEOUT_SECONDS)
+
+    # First-run Codex can pause on the trust-directory screen before accepting slash commands.
+    if "do you trust the contents of this directory" in captured.lower():
+        os.write(master_fd, b"1\r")
+        captured += _read_pty(master_fd, 3.0)
+
+    os.write(master_fd, b"/status\r")
+    deadline = time.monotonic() + USAGE_STATUS_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        captured += _read_pty(master_fd, 1.0)
+        parsed = _parse_usage_output(captured)
+        if parsed["five_hour_limit"] or parsed["weekly_limit"]:
+            break
+    return captured
+
+
 def fetch_codex_usage_status() -> dict[str, Any]:
     if active_task_id():
         return {
@@ -413,12 +431,7 @@ def fetch_codex_usage_status() -> dict[str, Any]:
         )
         os.close(slave_fd)
         slave_fd = -1
-        initial = _read_pty(master_fd, USAGE_READY_TIMEOUT_SECONDS)
-        if "codex" not in initial.lower() and "status" not in initial.lower():
-            # Continue anyway; some terminals render minimal startup text.
-            pass
-        os.write(master_fd, b"/status\r")
-        status_text = _read_pty(master_fd, USAGE_CAPTURE_TIMEOUT_SECONDS)
+        status_text = _capture_status_from_tui(master_fd)
         try:
             os.write(master_fd, b"/quit\r")
         except OSError:
