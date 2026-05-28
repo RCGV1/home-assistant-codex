@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.28
+
+- Wait for the rich Codex `/status` panel before finishing the usage probe.
+- Keep footer status-line quota values as a fallback when the rich panel does not appear.
+
 ## 0.1.27
 
 - Make the 5-hour and weekly usage sensors numeric percentage sensors.

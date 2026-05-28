@@ -382,6 +382,15 @@ def _parse_usage_output(text: str) -> dict[str, str]:
     }
 
 
+def _has_rich_status_panel(text: str) -> bool:
+    compacted = compact_cli_text(text)
+    return (
+        "chatgptcomcodexsettingsusage" in compacted
+        or ("5hlimit" in compacted and "weeklylimit" in compacted)
+        or ("account" in compacted and "session" in compacted and "model" in compacted)
+    )
+
+
 def _capture_status_from_tui(master_fd: int) -> str:
     captured = _read_pty(master_fd, USAGE_READY_TIMEOUT_SECONDS)
 
@@ -394,8 +403,7 @@ def _capture_status_from_tui(master_fd: int) -> str:
     deadline = time.monotonic() + USAGE_STATUS_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         captured += _read_pty(master_fd, 1.0)
-        parsed = _parse_usage_output(captured)
-        if parsed["five_hour_limit"] or parsed["weekly_limit"]:
+        if _has_rich_status_panel(captured):
             break
     return captured
 
