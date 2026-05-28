@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.29
+
+- Submit the Codex TUI `/status` command as typed text followed by a delayed Enter keypress.
+- Fix usage probing when Codex accepted `/status` into the prompt line but did not execute it, which prevented the rich status panel and reset times from being captured.
+- Add `reset_at` ISO timestamp attributes derived from Codex's reported reset times.
+
 ## 0.1.28
 
 - Wait for the rich Codex `/status` panel before finishing the usage probe.

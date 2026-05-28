@@ -20,7 +20,7 @@ import threading
 import time
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -62,6 +62,7 @@ USAGE_REFRESH_INTERVAL_SECONDS = 300
 USAGE_READY_TIMEOUT_SECONDS = 8
 USAGE_STATUS_TIMEOUT_SECONDS = 25
 USAGE_POST_TRUST_READY_SECONDS = 10
+USAGE_COMMAND_SUBMIT_DELAY_SECONDS = 0.7
 UUID_RE = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
 )
@@ -78,6 +79,36 @@ WEEKLY_RE = re.compile(
     r"(?P<percent>\d{1,3})%(?:\s+left)?(?:\s+\(resets\s+(?P<reset>[^)]+)\))?"
 )
 CONTEXT_RE = re.compile(r"(?i)(?<!\w)context\s+(?P<percent>\d{1,3})%\s+left\b")
+RESET_TIME_RE = re.compile(
+    r"(?i)^\s*(?P<hour>\d{1,2}):(?P<minute>\d{2})"
+    r"(?:\s+on\s+(?P<day>\d{1,2})\s+(?P<month>[a-z]{3,9})(?:\s+(?P<year>\d{4}))?)?\s*$"
+)
+MONTHS = {
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
+}
 
 EXCLUDED_PARTS = {
     ".cache",
@@ -132,8 +163,15 @@ usage_state: dict[str, Any] = {
     "status": "unavailable",
     "updated_at": "",
     "five_hour_limit": "",
+    "five_hour_percent": "",
+    "five_hour_reset": "",
+    "five_hour_reset_at": "",
     "weekly_limit": "",
+    "weekly_percent": "",
+    "weekly_reset": "",
+    "weekly_reset_at": "",
     "context_remaining": "",
+    "context_percent": "",
     "raw_excerpt": "",
     "error": "",
     "_updated_monotonic": 0.0,
@@ -313,6 +351,44 @@ def compact_cli_text(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", clean_cli_text(text).casefold())
 
 
+def parse_codex_reset_at(reset_text: str, now: datetime | None = None) -> str:
+    """Normalize Codex reset text into a local ISO timestamp when the format is known."""
+    if not reset_text:
+        return ""
+    match = RESET_TIME_RE.match(reset_text)
+    if not match:
+        return ""
+    current = now or datetime.now().astimezone()
+    hour = int(match.group("hour"))
+    minute = int(match.group("minute"))
+    day_text = match.group("day")
+    month_text = (match.group("month") or "").casefold()
+    year_text = match.group("year")
+    try:
+        if day_text and month_text:
+            month = MONTHS.get(month_text)
+            if not month:
+                return ""
+            year = int(year_text) if year_text else current.year
+            parsed = datetime(
+                year,
+                month,
+                int(day_text),
+                hour,
+                minute,
+                tzinfo=current.tzinfo,
+            )
+            if not year_text and parsed < current - timedelta(minutes=1):
+                parsed = parsed.replace(year=year + 1)
+        else:
+            parsed = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if parsed < current - timedelta(minutes=1):
+                parsed += timedelta(days=1)
+    except ValueError:
+        return ""
+    return parsed.isoformat()
+
+
 def usage_status_payload() -> dict[str, Any]:
     with usage_lock:
         return {k: v for k, v in usage_state.items() if not k.startswith("_")}
@@ -354,6 +430,7 @@ def _parse_usage_output(text: str) -> dict[str, str]:
     weekly_reset = ""
     context = ""
     context_percent = ""
+    now = datetime.now().astimezone()
     for line in lines:
         if matches := list(FIVE_HOUR_RE.finditer(line)):
             match = matches[-1]
@@ -373,9 +450,11 @@ def _parse_usage_output(text: str) -> dict[str, str]:
         "five_hour_limit": five_hour,
         "five_hour_percent": five_hour_percent,
         "five_hour_reset": five_hour_reset,
+        "five_hour_reset_at": parse_codex_reset_at(five_hour_reset, now),
         "weekly_limit": weekly,
         "weekly_percent": weekly_percent,
         "weekly_reset": weekly_reset,
+        "weekly_reset_at": parse_codex_reset_at(weekly_reset, now),
         "context_remaining": context,
         "context_percent": context_percent,
         "raw_excerpt": "\n".join(lines[-25:]),
@@ -399,7 +478,9 @@ def _capture_status_from_tui(master_fd: int) -> str:
         os.write(master_fd, b"1\r")
         captured += _read_pty(master_fd, USAGE_POST_TRUST_READY_SECONDS)
 
-    os.write(master_fd, b"/status\r")
+    os.write(master_fd, b"/status")
+    time.sleep(USAGE_COMMAND_SUBMIT_DELAY_SECONDS)
+    os.write(master_fd, b"\r")
     deadline = time.monotonic() + USAGE_STATUS_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         captured += _read_pty(master_fd, 1.0)
@@ -416,9 +497,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "five_hour_limit": usage_status_payload().get("five_hour_limit", ""),
             "five_hour_percent": usage_status_payload().get("five_hour_percent", ""),
             "five_hour_reset": usage_status_payload().get("five_hour_reset", ""),
+            "five_hour_reset_at": usage_status_payload().get("five_hour_reset_at", ""),
             "weekly_limit": usage_status_payload().get("weekly_limit", ""),
             "weekly_percent": usage_status_payload().get("weekly_percent", ""),
             "weekly_reset": usage_status_payload().get("weekly_reset", ""),
+            "weekly_reset_at": usage_status_payload().get("weekly_reset_at", ""),
             "context_remaining": usage_status_payload().get("context_remaining", ""),
             "context_percent": usage_status_payload().get("context_percent", ""),
             "raw_excerpt": usage_status_payload().get("raw_excerpt", ""),
@@ -431,9 +514,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "five_hour_limit": "",
             "five_hour_percent": "",
             "five_hour_reset": "",
+            "five_hour_reset_at": "",
             "weekly_limit": "",
             "weekly_percent": "",
             "weekly_reset": "",
+            "weekly_reset_at": "",
             "context_remaining": "",
             "context_percent": "",
             "raw_excerpt": "",
@@ -446,9 +531,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "five_hour_limit": "",
             "five_hour_percent": "",
             "five_hour_reset": "",
+            "five_hour_reset_at": "",
             "weekly_limit": "",
             "weekly_percent": "",
             "weekly_reset": "",
+            "weekly_reset_at": "",
             "context_remaining": "",
             "context_percent": "",
             "raw_excerpt": "",
@@ -465,9 +552,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "five_hour_limit": "",
             "five_hour_percent": "",
             "five_hour_reset": "",
+            "five_hour_reset_at": "",
             "weekly_limit": "",
             "weekly_percent": "",
             "weekly_reset": "",
+            "weekly_reset_at": "",
             "context_remaining": "",
             "context_percent": "",
             "raw_excerpt": "",
@@ -513,9 +602,11 @@ def fetch_codex_usage_status() -> dict[str, Any]:
             "five_hour_limit": "",
             "five_hour_percent": "",
             "five_hour_reset": "",
+            "five_hour_reset_at": "",
             "weekly_limit": "",
             "weekly_percent": "",
             "weekly_reset": "",
+            "weekly_reset_at": "",
             "context_remaining": "",
             "context_percent": "",
             "raw_excerpt": "",
