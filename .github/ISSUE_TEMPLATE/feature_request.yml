@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the Home Assistant workflow you want to make better.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem should this feature solve?
+      placeholder: "I want to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Area of the project
+      options:
+        - Worker app/add-on
+        - Custom integration
+        - Home Assistant actions/services
+        - Config flow or setup
+        - Entities or sensors
+        - Ingress web UI
+        - Codex sign-in
+        - Task execution
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Are there current workarounds or other designs you considered?
+
+  - type: textarea
+    id: safety
+    attributes:
+      label: Security and privacy considerations
+      description: Note any impact on authentication, file writes under /config, task execution, notifications, or private Home Assistant data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked the existing issues for a similar request.
+          required: true
+        - label: This request does not include secrets, tokens, device codes, private URLs, or personal Home Assistant configuration.
+          required: true
