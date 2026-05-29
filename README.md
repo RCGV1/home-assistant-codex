@@ -1,6 +1,16 @@
-# Codex for Home Assistant
+# Codex for Home Assistant [![HACS][hacs-badge]][hacs-url] [![release][release-badge]][release-url] ![downloads][downloads-badge] [![build][build-badge]][build-url] [![license][license-badge]][license-url]
 
 Run Codex CLI against your Home Assistant configuration folder from Home Assistant.
+
+## Example Flow
+
+Ask Home Assistant Assist to make a configuration or dashboard change:
+
+![Home Assistant Assist starting a Codex task to update a dashboard card label][assist-screenshot]
+
+Codex runs the task and sends a Home Assistant notification when it finishes:
+
+![Home Assistant persistent notification confirming a completed Codex task][notification-screenshot]
 
 This repository contains two pieces:
 
@@ -15,16 +25,6 @@ This repository contains two pieces:
 - Supports Codex device-code sign-in through Home Assistant persistent notifications.
 - Reports active task count, latest task status, auth status, and task-running state.
 - Uses Home Assistant Ingress for the app UI; the worker HTTP port is not exposed to the LAN.
-
-## Example Flow
-
-Ask Home Assistant Assist to make a configuration or dashboard change:
-
-<img src="examples/codex-1.JPG" alt="Home Assistant Assist starting a Codex task to update a dashboard card label" width="560">
-
-Codex runs the task and sends a Home Assistant notification when it finishes:
-
-<img src="examples/codex-2.JPG" alt="Home Assistant persistent notification confirming a completed Codex task" width="560">
 
 ## Security Notes
 
@@ -244,3 +244,15 @@ Release builds also publish the `latest` image tag. Manual workflow builds from 
 ├── repository.yaml
 └── hacs.json
 ```
+
+[assist-screenshot]: https://raw.githubusercontent.com/moryoav/home-assistant-codex/main/examples/codex-1.JPG
+[notification-screenshot]: https://raw.githubusercontent.com/moryoav/home-assistant-codex/main/examples/codex-2.JPG
+[hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square
+[hacs-url]: https://github.com/hacs/integration
+[release-badge]: https://img.shields.io/github/v/release/moryoav/home-assistant-codex?style=flat-square
+[release-url]: https://github.com/moryoav/home-assistant-codex/releases
+[downloads-badge]: https://img.shields.io/github/downloads/moryoav/home-assistant-codex/total?style=flat-square
+[build-badge]: https://img.shields.io/github/actions/workflow/status/moryoav/home-assistant-codex/build.yaml?branch=main&style=flat-square&label=build
+[build-url]: https://github.com/moryoav/home-assistant-codex/actions/workflows/build.yaml
+[license-badge]: https://img.shields.io/github/license/moryoav/home-assistant-codex?style=flat-square
+[license-url]: https://github.com/moryoav/home-assistant-codex/blob/main/LICENSE

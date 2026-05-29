@@ -14,7 +14,7 @@ body:
     attributes:
       label: Codex for Home Assistant version
       description: Include the integration version, worker app version, or commit if known.
-      placeholder: "Example: integration 0.1.18, worker 0.1.32"
+      placeholder: "Example: integration 0.1.33, worker 0.1.33"
     validations:
       required: true
 

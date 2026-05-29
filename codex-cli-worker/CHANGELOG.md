@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.33
+
+- Updated README badges and screenshot links so HACS can render the project images reliably.
+- Added dark-theme brand assets for the HACS and Home Assistant integration views.
+- Aligned the custom integration manifest version with the release version.
+
 ## 0.1.32
 
 - Added separate timestamp sensors for Codex 5-hour and weekly reset times.
