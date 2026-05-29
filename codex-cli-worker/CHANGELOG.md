@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.34
+
+- Added HACS and Hassfest validation workflows required for HACS default repository submission.
+- Fixed HACS manifest validation by removing an unsupported legacy key.
+- Fixed Hassfest manifest ordering and declared the integration as config-entry-only.
+- Added GitHub repository topics required by HACS repository checks.
+
 ## 0.1.33
 
 - Updated README badges and screenshot links so HACS can render the project images reliably.
