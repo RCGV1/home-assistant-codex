@@ -39,6 +39,7 @@ OPTIONS_PATH = DATA_ROOT / "options.json"
 WORKER_TOKEN_PATH = DATA_ROOT / "worker_api_token"
 SCHEMA_PATH = DATA_ROOT / "codex-output-schema.json"
 CODEX_CONFIG_PATH = CODEX_HOME / "config.toml"
+AGENTS_PATH = CONFIG_ROOT / "AGENTS.md"
 TASK_STATE_FILE = DATA_ROOT / "task_index.json"
 
 DEFAULT_OPTIONS = {
@@ -50,6 +51,8 @@ DEFAULT_OPTIONS = {
     "task_timeout_seconds": 3600,
     "auto_save_lovelace": True,
     "ha_url": "http://supervisor/core",
+    "agents_md": "",
+    "HA_TOKEN": "",
 }
 REASONING_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
 
@@ -264,6 +267,7 @@ def ensure_runtime_files() -> None:
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
     task_root().mkdir(parents=True, exist_ok=True)
     AUTH_QR_DIR.mkdir(parents=True, exist_ok=True)
+    sync_agents_file(read_options())
     if not api_token():
         set_api_token(secrets.token_urlsafe(32))
     schema = {
@@ -294,6 +298,16 @@ def ensure_runtime_files() -> None:
         ),
         encoding="utf-8",
     )
+
+
+def sync_agents_file(options: dict[str, Any] | None = None) -> bool:
+    """Write AGENTS.md from add-on options when the user provided content."""
+    options = options or read_options()
+    content = str(options.get("agents_md") or "")
+    if not content.strip():
+        return False
+    AGENTS_PATH.write_text(content.rstrip() + "\n", encoding="utf-8")
+    return True
 
 
 def save_task_index() -> None:
@@ -1302,6 +1316,9 @@ def codex_env() -> dict[str, str]:
     env = dict(os.environ)
     env["CODEX_HOME"] = str(CODEX_HOME)
     env["HOME"] = str(DATA_ROOT)
+    ha_token = str(read_options().get("HA_TOKEN") or "").strip()
+    if ha_token:
+        env["HA_TOKEN"] = ha_token
     return env
 
 
@@ -1438,8 +1455,10 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
     final_file = task_dir / ("final-resume.json" if reply else "final.json")
     prompt_file = task_dir / ("prompt-resume.txt" if reply else "prompt.txt")
     before_manifest_path = task_dir / "manifest-before.json"
+    options = read_options()
 
     update_task(task_id, status="running", started_at=utc_now(), error="")
+    sync_agents_file(options)
     if not before_manifest_path.exists():
         try:
             snapshot = create_snapshot(task_id)

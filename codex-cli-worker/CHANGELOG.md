@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.35
+
+- Added optional add-on configuration for writing `/config/AGENTS.md` before Codex runs.
+- Added a masked optional `HA_TOKEN` add-on option and pass it to Codex subprocesses as an environment variable.
+
 ## 0.1.34
 
 - Added HACS and Hassfest validation workflows required for HACS default repository submission.
