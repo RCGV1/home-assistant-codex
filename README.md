@@ -97,7 +97,7 @@ The app's web UI is available through Home Assistant Ingress. Do not try to open
 
 The app options include dropdowns for the Codex model and model reasoning effort. `medium` reasoning is the default balance; `high` and `xhigh` can spend more time/quota, and `xhigh` only applies where the selected model supports it.
 
-You can optionally set `agents_md` to write `/config/AGENTS.md` before Codex runs. Leave it blank to keep any existing file unchanged. You can also set the masked `HA_TOKEN` option when Codex tasks need a Home Assistant token in their environment.
+The app web UI can view and save `/config/AGENTS.md`. You can also set the masked `HA_TOKEN` option when Codex tasks need a Home Assistant token in their environment.
 
 ### 3. Sign In to Codex
 

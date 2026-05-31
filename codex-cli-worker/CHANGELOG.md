@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.36
+
+- Replaced the option-backed `AGENTS.md` writer with an add-on web UI editor for the real `/config/AGENTS.md` file.
+- Kept `HA_TOKEN` as the optional masked add-on option passed to Codex subprocesses.
+
 ## 0.1.35
 
 - Added optional add-on configuration for writing `/config/AGENTS.md` before Codex runs.

@@ -60,7 +60,7 @@ Codex CLI sign-in uses your ChatGPT/OpenAI account. It may work with a free Chat
 
 ## AGENTS.md and HA_TOKEN
 
-The optional `agents_md` add-on option writes its content to `/config/AGENTS.md` before Codex runs. Leave it blank to keep any existing file unchanged.
+The add-on web UI includes an editor for `/config/AGENTS.md`. This file remains the source of truth for shared Codex project instructions.
 
 The optional `HA_TOKEN` add-on option is passed to Codex subprocesses as the `HA_TOKEN` environment variable. Use a scoped Home Assistant token and only configure it if you want Codex tasks to call Home Assistant APIs directly.
 

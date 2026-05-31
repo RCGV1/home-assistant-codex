@@ -23,9 +23,6 @@ configuration:
   ha_url:
     name: Home Assistant API URL
     description: API base URL used by the app for Home Assistant calls. The default Supervisor Core proxy is recommended.
-  agents_md:
-    name: AGENTS.md content
-    description: Optional instructions to write to /config/AGENTS.md before Codex runs. Leave blank to keep any existing file unchanged.
   HA_TOKEN:
     name: HA_TOKEN
     description: Optional Home Assistant token exposed to Codex subprocesses as the HA_TOKEN environment variable.

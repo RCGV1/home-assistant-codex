@@ -51,11 +51,11 @@ DEFAULT_OPTIONS = {
     "task_timeout_seconds": 3600,
     "auto_save_lovelace": True,
     "ha_url": "http://supervisor/core",
-    "agents_md": "",
     "HA_TOKEN": "",
 }
 REASONING_EFFORTS = {"minimal", "low", "medium", "high", "xhigh"}
 
+AGENTS_MAX_BYTES = 256 * 1024
 SNAPSHOT_MAX_BYTES = 8 * 1024 * 1024
 LOG_TAIL_BYTES = 300_000
 AUTH_NOTIFY_ID = "codex_cli_login"
@@ -262,12 +262,26 @@ def set_api_token(token: str) -> bool:
     return True
 
 
+def read_agents_file() -> str:
+    if not AGENTS_PATH.exists():
+        return ""
+    if AGENTS_PATH.stat().st_size > AGENTS_MAX_BYTES:
+        raise ValueError(f"{AGENTS_PATH} is larger than {AGENTS_MAX_BYTES} bytes")
+    return AGENTS_PATH.read_text(encoding="utf-8")
+
+
+def write_agents_file(content: str) -> None:
+    encoded = content.encode("utf-8")
+    if len(encoded) > AGENTS_MAX_BYTES:
+        raise ValueError(f"AGENTS.md is larger than {AGENTS_MAX_BYTES} bytes")
+    AGENTS_PATH.write_text(content.rstrip() + "\n", encoding="utf-8")
+
+
 def ensure_runtime_files() -> None:
     CODEX_HOME.mkdir(parents=True, exist_ok=True)
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
     task_root().mkdir(parents=True, exist_ok=True)
     AUTH_QR_DIR.mkdir(parents=True, exist_ok=True)
-    sync_agents_file(read_options())
     if not api_token():
         set_api_token(secrets.token_urlsafe(32))
     schema = {
@@ -298,16 +312,6 @@ def ensure_runtime_files() -> None:
         ),
         encoding="utf-8",
     )
-
-
-def sync_agents_file(options: dict[str, Any] | None = None) -> bool:
-    """Write AGENTS.md from add-on options when the user provided content."""
-    options = options or read_options()
-    content = str(options.get("agents_md") or "")
-    if not content.strip():
-        return False
-    AGENTS_PATH.write_text(content.rstrip() + "\n", encoding="utf-8")
-    return True
 
 
 def save_task_index() -> None:
@@ -1455,10 +1459,8 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
     final_file = task_dir / ("final-resume.json" if reply else "final.json")
     prompt_file = task_dir / ("prompt-resume.txt" if reply else "prompt.txt")
     before_manifest_path = task_dir / "manifest-before.json"
-    options = read_options()
 
     update_task(task_id, status="running", started_at=utc_now(), error="")
-    sync_agents_file(options)
     if not before_manifest_path.exists():
         try:
             snapshot = create_snapshot(task_id)
@@ -1646,6 +1648,13 @@ def index() -> Response:
     <div id="login-card"></div>
   </section>
   <section>
+    <h2>AGENTS.md</h2>
+    <textarea id="agents-md" rows="14" spellcheck="false"></textarea>
+    <button onclick="loadAgents()">Load</button>
+    <button onclick="saveAgents()" style="background:#188038">Save</button>
+    <pre id="agents-result"></pre>
+  </section>
+  <section>
     <h2>Start a task</h2>
     <label>Prompt</label>
     <textarea id="prompt" rows="8"></textarea>
@@ -1704,6 +1713,37 @@ async function startTask() {{
   }});
   await renderJsonResponse(result, res);
 }}
+async function loadAgents() {{
+  const result = document.getElementById('agents-result');
+  result.textContent = 'Loading...';
+  const res = await fetch(workerUrl('/agents'), {{
+    method: 'GET',
+    headers: workerHeaders(false)
+  }});
+  const text = await res.text();
+  try {{
+    const data = JSON.parse(text);
+    if (!res.ok || !data.ok) {{
+      result.textContent = JSON.stringify(data, null, 2);
+      return;
+    }}
+    document.getElementById('agents-md').value = data.content || '';
+    result.textContent = data.exists ? 'Loaded /config/AGENTS.md' : 'AGENTS.md does not exist yet.';
+  }} catch (err) {{
+    result.textContent = text || ('HTTP ' + res.status);
+  }}
+}}
+async function saveAgents() {{
+  const result = document.getElementById('agents-result');
+  const content = document.getElementById('agents-md').value;
+  result.textContent = 'Saving...';
+  const res = await fetch(workerUrl('/agents'), {{
+    method: 'POST',
+    headers: workerHeaders(),
+    body: JSON.stringify({{ content }})
+  }});
+  await renderJsonResponse(result, res);
+}}
 async function startLogin() {{
   const result = document.getElementById('login-result');
   result.textContent = 'Starting login...';
@@ -1727,6 +1767,7 @@ async function logoutCodex() {{
   refreshLoginStatus();
 }}
 refreshLoginStatus();
+loadAgents();
 </script>
 </body>
 </html>"""
@@ -1767,6 +1808,38 @@ def status() -> Response:
             "codex_usage": usage_status_payload(),
         }
     )
+
+
+@app.get("/agents")
+@require_auth
+def get_agents() -> Response:
+    try:
+        content = read_agents_file()
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc), "path": str(AGENTS_PATH)}), 500
+    return jsonify(
+        {
+            "ok": True,
+            "path": str(AGENTS_PATH),
+            "exists": AGENTS_PATH.exists(),
+            "content": content,
+        }
+    )
+
+
+@app.post("/agents")
+@require_auth
+def save_agents() -> Response:
+    payload = request.get_json(silent=True) or {}
+    if "content" not in payload:
+        return jsonify({"ok": False, "error": "content is required"}), 400
+    try:
+        write_agents_file(str(payload.get("content") or ""))
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc), "path": str(AGENTS_PATH)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc), "path": str(AGENTS_PATH)}), 500
+    return jsonify({"ok": True, "path": str(AGENTS_PATH), "bytes": AGENTS_PATH.stat().st_size})
 
 
 @app.post("/auth/start")
