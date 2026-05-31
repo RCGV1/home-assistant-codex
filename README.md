@@ -1,4 +1,5 @@
-# Codex for Home Assistant [![HACS][hacs-badge]][hacs-url] [![release][release-badge]][release-url] ![downloads][downloads-badge] [![build][build-badge]][build-url] [![license][license-badge]][license-url]
+# Codex for Home Assistant
+[![HACS][hacs-badge]][hacs-url] [![release][release-badge]][release-url] ![downloads][downloads-badge] [![build][build-badge]][build-url] [![license][license-badge]][license-url]
 
 Run Codex CLI against your Home Assistant configuration folder from Home Assistant.
 
