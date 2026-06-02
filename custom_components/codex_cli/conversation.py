@@ -86,7 +86,7 @@ class CodexConversationEntity(
     """Conversation agent that starts safe Codex config tasks."""
 
     _attr_has_entity_name = True
-    _attr_name = "Codex Assistant"
+    _attr_name = "Assistant"
     _attr_translation_key = "assistant"
 
     def __init__(self, entry: ConfigEntry) -> None:
