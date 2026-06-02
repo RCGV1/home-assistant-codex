@@ -54,6 +54,11 @@
       "task_running": {
         "name": "Task running"
       }
+    },
+    "conversation": {
+      "assistant": {
+        "name": "Assistant"
+      }
     }
   },
   "issues": {

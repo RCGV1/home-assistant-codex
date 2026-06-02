@@ -33,7 +33,11 @@ from .const import (
 from .coordinator import CodexCliCoordinator
 from .discovery import async_discover_worker
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.CONVERSATION,
+]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 START_TASK_SCHEMA = vol.Schema(
