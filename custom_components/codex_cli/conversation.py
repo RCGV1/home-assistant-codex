@@ -103,9 +103,13 @@ class CodexConversationEntity(
                 "Codex is not signed in yet. Start the Codex sign-in flow, authenticate it, then ask me again.",
             )
 
-        prompt = _build_codex_prompt(text)
+        fast_read_only = _is_fast_read_only_request(text)
+        prompt = _build_codex_prompt(text, fast_read_only=fast_read_only)
         try:
-            result = await runtime_data.client.start_task(prompt)
+            result = await runtime_data.client.start_task(
+                prompt,
+                fast_read_only=fast_read_only,
+            )
         except CodexCliApiError as exc:
             return self._result(
                 user_input,
@@ -146,11 +150,17 @@ class CodexConversationEntity(
         )
 
 
-def _build_codex_prompt(user_prompt: str) -> str:
+def _build_codex_prompt(user_prompt: str, *, fast_read_only: bool = False) -> str:
     """Wrap the user prompt with safety and operating instructions."""
+    speed_instruction = (
+        "This is a fast read-only live-status request: use HA_TOKEN with HA REST/WebSocket state/history APIs only; do not inspect files, edit files, call services, or change devices. "
+        if fast_read_only
+        else ""
+    )
     return (
         "You are Codex inside Benjamin's Home Assistant. "
         "Handle the request through Codex, safely and briefly. "
+        f"{speed_instruction}"
         "For simple live-status questions, use HA_TOKEN with the HA REST/WebSocket API first; do not scan /config. "
         "Inspect files/dashboards only for config, dashboard, automation, or integration changes. "
         "Prefer reversible, auditable changes; preserve unrelated edits and validate changed YAML/JSON when practical. "
@@ -159,6 +169,58 @@ def _build_codex_prompt(user_prompt: str) -> str:
         "House priorities: dashboards, automations, sensors, Nest doorbell media, security, cleaning/vacuum, backups, repairs, integrations.\n\n"
         f"User request: {user_prompt}"
     )
+
+
+def _is_fast_read_only_request(text: str) -> bool:
+    """Return true for clear live-status questions that should skip worker snapshots."""
+    lowered = text.lower()
+    change_terms = (
+        "add",
+        "arm",
+        "call",
+        "change",
+        "configure",
+        "create",
+        "delete",
+        "disable",
+        "disarm",
+        "do ",
+        "edit",
+        "enable",
+        "fix",
+        "make",
+        "open ",
+        "restart",
+        "run ",
+        "send",
+        "set ",
+        "start ",
+        "stop ",
+        "turn ",
+        "update",
+        "write",
+    )
+    if any(term in lowered for term in change_terms):
+        return False
+
+    read_terms = (
+        "what",
+        "where",
+        "when",
+        "which",
+        "who",
+        "how is",
+        "how are",
+        "status",
+        "state",
+        "doing",
+        "happening",
+        "open?",
+        "closed?",
+        "on?",
+        "off?",
+    )
+    return any(term in lowered for term in read_terms)
 
 
 async def _async_wait_for_task(client: Any, task_id: str, *, timeout: int) -> str | None:

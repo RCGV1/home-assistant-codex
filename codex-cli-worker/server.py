@@ -1453,7 +1453,13 @@ def parse_final(final_file: Path, returncode: int) -> dict[str, Any]:
     }
 
 
-def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: str | None = None) -> None:
+def run_task(
+    task_id: str,
+    prompt: str,
+    session_id: str | None = None,
+    reply: str | None = None,
+    fast_read_only: bool = False,
+) -> None:
     task_dir = get_task_dir(task_id)
     task_dir.mkdir(parents=True, exist_ok=True)
     final_file = task_dir / ("final-resume.json" if reply else "final.json")
@@ -1461,7 +1467,10 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
     before_manifest_path = task_dir / "manifest-before.json"
 
     update_task(task_id, status="running", started_at=utc_now(), error="")
-    if not before_manifest_path.exists():
+    if fast_read_only:
+        before_manifest_path.write_text("{}", encoding="utf-8")
+        update_task(task_id, snapshot={"skipped": True, "reason": "fast_read_only", "created_at": utc_now()})
+    elif not before_manifest_path.exists():
         try:
             snapshot = create_snapshot(task_id)
             update_task(task_id, snapshot=snapshot)
@@ -1524,21 +1533,27 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
         stderr_thread.join(timeout=5)
 
     final = parse_final(final_file, returncode)
-    after_manifest = build_manifest()
-    (task_dir / "manifest-after.json").write_text(json.dumps(after_manifest, indent=2), encoding="utf-8")
-    try:
-        before_manifest = json.loads(before_manifest_path.read_text(encoding="utf-8"))
-    except Exception:
-        before_manifest = {}
-    changes = diff_manifests(before_manifest, after_manifest)
-    (task_dir / "changes.json").write_text(json.dumps(changes, indent=2), encoding="utf-8")
-    validation_errors = validate_changed_files(changes)
+    if fast_read_only:
+        changes = {"added": [], "changed": [], "deleted": []}
+        validation_errors = []
+        lovelace_results: list[dict[str, Any]] = []
+        (task_dir / "changes.json").write_text(json.dumps(changes, indent=2), encoding="utf-8")
+    else:
+        after_manifest = build_manifest()
+        (task_dir / "manifest-after.json").write_text(json.dumps(after_manifest, indent=2), encoding="utf-8")
+        try:
+            before_manifest = json.loads(before_manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            before_manifest = {}
+        changes = diff_manifests(before_manifest, after_manifest)
+        (task_dir / "changes.json").write_text(json.dumps(changes, indent=2), encoding="utf-8")
+        validation_errors = validate_changed_files(changes)
 
-    lovelace_results: list[dict[str, Any]] = []
-    if read_options().get("auto_save_lovelace"):
-        for ref in find_lovelace_dashboard_refs(changes):
-            ok, detail = save_lovelace_dashboard(ref)
-            lovelace_results.append({**ref, "success": ok, "message": detail})
+        lovelace_results = []
+        if read_options().get("auto_save_lovelace"):
+            for ref in find_lovelace_dashboard_refs(changes):
+                ok, detail = save_lovelace_dashboard(ref)
+                lovelace_results.append({**ref, "success": ok, "message": detail})
 
     if timed_out:
         final = {
@@ -1606,8 +1621,18 @@ def run_task(task_id: str, prompt: str, session_id: str | None = None, reply: st
     refresh_usage_status_async(force=True)
 
 
-def start_background_task(task_id: str, prompt: str, session_id: str | None = None, reply: str | None = None) -> None:
-    thread = threading.Thread(target=run_task, args=(task_id, prompt, session_id, reply), daemon=True)
+def start_background_task(
+    task_id: str,
+    prompt: str,
+    session_id: str | None = None,
+    reply: str | None = None,
+    fast_read_only: bool = False,
+) -> None:
+    thread = threading.Thread(
+        target=run_task,
+        args=(task_id, prompt, session_id, reply, fast_read_only),
+        daemon=True,
+    )
     thread.start()
 
 
@@ -1888,13 +1913,14 @@ def create_task() -> Response:
         status="queued",
         title=title,
         prompt=prompt,
+        fast_read_only=bool(payload.get("fast_read_only")),
         created_at=utc_now(),
         summary="",
         question="",
         details="",
     )
     (get_task_dir(task_id) / "user-prompt.txt").write_text(prompt, encoding="utf-8")
-    start_background_task(task_id, prompt)
+    start_background_task(task_id, prompt, fast_read_only=bool(payload.get("fast_read_only")))
     return jsonify({"ok": True, "task_id": task_id, "status": "queued"})
 
 
