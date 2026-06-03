@@ -8,8 +8,9 @@ on:
 
 env:
   ADDON_PATH: codex-cli-worker
-  ARCHITECTURES: '["amd64", "aarch64"]'
+  ARCHITECTURES: '["aarch64"]'
   IMAGE_NAME: codex-cli-worker
+  IMAGE_OWNER: rcgv1
 
 permissions:
   contents: read
@@ -80,30 +81,10 @@ jobs:
           arch: ${{ matrix.arch }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           context: ${{ env.ADDON_PATH }}
-          image: ${{ matrix.image }}
+          image: ghcr.io/${{ env.IMAGE_OWNER }}/${{ matrix.arch }}-${{ env.IMAGE_NAME }}
           image-tags: |
             ${{ needs.version.outputs.image_tags }}
           labels: |
             io.hass.type=app
           push: "true"
           version: ${{ needs.version.outputs.version }}
-
-  manifest:
-    name: Publish multi-arch manifest
-    needs:
-      - version
-      - init
-      - build
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      packages: write
-    steps:
-      - name: Publish multi-arch manifest
-        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.03.2
-        with:
-          architectures: ${{ env.ARCHITECTURES }}
-          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
-          image-name: ${{ env.IMAGE_NAME }}
-          image-tags: |
-            ${{ needs.version.outputs.image_tags }}
