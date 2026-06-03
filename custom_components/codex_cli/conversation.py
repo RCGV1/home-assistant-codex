@@ -49,6 +49,19 @@ CONFIG_TASK_KEYWORDS = (
     "install",
     "remove",
     "update",
+    "status",
+    "health",
+    "house",
+    "home",
+    "what's up",
+    "whats up",
+    "what is up",
+    "anything wrong",
+    "problems",
+    "issues",
+    "overview",
+    "check my",
+    "look at my",
 )
 
 DIRECT_CONTROL_HINTS = (
