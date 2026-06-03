@@ -16,72 +16,6 @@ from .const import CONF_BASE_URL, DOMAIN
 
 PARALLEL_UPDATES = 0
 
-CONFIG_TASK_KEYWORDS = (
-    "automation",
-    "automations",
-    "dashboard",
-    "dashboards",
-    "lovelace",
-    "script",
-    "scripts",
-    "scene",
-    "scenes",
-    "helper",
-    "helpers",
-    "integration",
-    "integrations",
-    "config",
-    "configuration",
-    "yaml",
-    "hacs",
-    "repair",
-    "repairs",
-    "trace",
-    "traces",
-    "debug",
-    "fix",
-    "improve",
-    "organize",
-    "review",
-    "clean up",
-    "setup",
-    "set up",
-    "install",
-    "remove",
-    "update",
-    "status",
-    "health",
-    "house",
-    "home",
-    "what's up",
-    "whats up",
-    "what is up",
-    "anything wrong",
-    "problems",
-    "issues",
-    "overview",
-    "check my",
-    "look at my",
-)
-
-DIRECT_CONTROL_HINTS = (
-    "turn on",
-    "turn off",
-    "switch on",
-    "switch off",
-    "open ",
-    "close ",
-    "unlock",
-    "lock ",
-    "arm ",
-    "disarm",
-    "set temperature",
-    "set the temperature",
-    "play ",
-    "pause ",
-    "stop ",
-)
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -136,31 +70,11 @@ class CodexConversationEntity(
     ) -> conversation.ConversationResult:
         """Process a message by starting a Codex task when appropriate."""
         text = user_input.text.strip()
-        lower_text = text.lower()
 
         if not text:
             return self._result(
                 user_input,
-                "Tell me what Home Assistant configuration, dashboard, or automation work you want Codex to do.",
-            )
-
-        if _is_help_request(lower_text):
-            return self._result(user_input, _help_response())
-
-        if _looks_like_direct_control(lower_text) and not _looks_like_config_task(
-            lower_text
-        ):
-            return self._result(
-                user_input,
-                "Use the normal Home Assistant assistant for immediate device control. "
-                "I handle Codex background work like dashboards, automations, scripts, integrations, and troubleshooting.",
-            )
-
-        if not _looks_like_config_task(lower_text):
-            return self._result(
-                user_input,
-                "I can help by starting a Codex background task for Home Assistant configuration, dashboards, automations, integrations, and debugging. "
-                "Please describe the change or investigation you want.",
+                "Tell me what you want Codex to inspect, explain, fix, or do for the house.",
             )
 
         runtime_data = getattr(self.entry, "runtime_data", None)
@@ -219,43 +133,15 @@ class CodexConversationEntity(
         )
 
 
-def _is_help_request(text: str) -> bool:
-    """Return whether the user is asking what Codex can do."""
-    return text in {
-        "help",
-        "what can you do",
-        "what can codex do",
-        "how can you help",
-        "how can codex help",
-    } or ("what" in text and "codex" in text and "do" in text)
-
-
-def _looks_like_config_task(text: str) -> bool:
-    """Return whether the request looks like a config/debugging task."""
-    return any(keyword in text for keyword in CONFIG_TASK_KEYWORDS)
-
-
-def _looks_like_direct_control(text: str) -> bool:
-    """Return whether the request looks like immediate device control."""
-    return any(hint in text for hint in DIRECT_CONTROL_HINTS)
-
-
-def _help_response() -> str:
-    """Return the short voice help response."""
-    return (
-        "I am the Codex configuration assistant for this Home Assistant instance. "
-        "I can start background tasks to review, fix, and improve dashboards, automations, scripts, integrations, repairs, and configuration. "
-        "For immediate actions like lights, locks, media, climate, or arming security, use the normal Home Assistant assistant."
-    )
-
-
 def _build_codex_prompt(user_prompt: str) -> str:
     """Wrap the user prompt with safety and operating instructions."""
     return (
         "You are Codex working inside Benjamin's Home Assistant configuration. "
         "Follow safety best practices. Prefer reversible, auditable changes. "
-        "Do not directly operate physical devices, locks, alarms, garage doors, cameras, speakers, thermostats, or security state unless the user explicitly requested that exact action and it is necessary. "
+        "Handle every user request as the Home Assistant Codex assistant. "
+        "For general house questions, inspect current Home Assistant state, relevant dashboards, automations, repairs, integrations, sensors, and recent task context as needed, then report clearly. "
         "For configuration changes, inspect the current state first, preserve unrelated user changes, create or rely on existing backups where available, validate configuration when possible, and report what changed. "
+        "For immediate physical actions involving locks, alarms, garage doors, cameras, speakers, thermostats, security state, or anything disruptive, do not act silently. Confirm the exact action and safety impact unless the user's request is explicit, low-risk, and necessary. "
         "If a request is ambiguous or high-impact, ask for input instead of guessing. "
         "Focus on being practically useful for this house: dashboards, automations, sensors, Nest doorbell/event media, security visibility, cleaning/vacuum workflows, backups, repairs, and integration health.\n\n"
         f"User request: {user_prompt}"
