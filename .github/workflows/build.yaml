@@ -81,7 +81,7 @@ jobs:
           arch: ${{ matrix.arch }}
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           context: ${{ env.ADDON_PATH }}
-          image: ghcr.io/${{ env.IMAGE_OWNER }}/${{ matrix.arch }}-${{ env.IMAGE_NAME }}
+          image: ghcr.io/${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}
           image-tags: |
             ${{ needs.version.outputs.image_tags }}
           labels: |
