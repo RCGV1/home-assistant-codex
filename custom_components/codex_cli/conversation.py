@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Literal
 
 from homeassistant.components import conversation
@@ -15,6 +16,8 @@ from .api import CodexCliApiError
 from .const import CONF_BASE_URL, DOMAIN
 
 PARALLEL_UPDATES = 0
+INLINE_WAIT_SECONDS = 90
+INLINE_POLL_SECONDS = 2
 
 
 async def async_setup_entry(
@@ -111,6 +114,16 @@ class CodexConversationEntity(
 
         await coordinator.async_request_refresh()
         task_id = result.get("task_id", "unknown")
+        inline_speech = await _async_wait_for_task(
+            runtime_data.client,
+            str(task_id),
+            timeout=INLINE_WAIT_SECONDS,
+        )
+        await coordinator.async_request_refresh()
+
+        if inline_speech:
+            return self._result(user_input, inline_speech)
+
         return self._result(
             user_input,
             f"I started a Codex background task for that. Task id: {task_id}. I will notify you when it finishes or needs input.",
@@ -139,6 +152,7 @@ def _build_codex_prompt(user_prompt: str) -> str:
         "You are Codex working inside Benjamin's Home Assistant configuration. "
         "Follow safety best practices. Prefer reversible, auditable changes. "
         "Handle every user request as the Home Assistant Codex assistant. "
+        "For simple live-status questions, prefer fast direct Home Assistant API state checks using HA_TOKEN instead of scanning the whole config tree. "
         "For general house questions, inspect current Home Assistant state, relevant dashboards, automations, repairs, integrations, sensors, and recent task context as needed, then report clearly. "
         "For configuration changes, inspect the current state first, preserve unrelated user changes, create or rely on existing backups where available, validate configuration when possible, and report what changed. "
         "For immediate physical actions involving locks, alarms, garage doors, cameras, speakers, thermostats, security state, or anything disruptive, do not act silently. Confirm the exact action and safety impact unless the user's request is explicit, low-risk, and necessary. "
@@ -146,3 +160,58 @@ def _build_codex_prompt(user_prompt: str) -> str:
         "Focus on being practically useful for this house: dashboards, automations, sensors, Nest doorbell/event media, security visibility, cleaning/vacuum workflows, backups, repairs, and integration health.\n\n"
         f"User request: {user_prompt}"
     )
+
+
+async def _async_wait_for_task(client: Any, task_id: str, *, timeout: int) -> str | None:
+    """Wait briefly for a task and return speech if it finishes."""
+    if not task_id or task_id == "unknown":
+        return None
+
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(INLINE_POLL_SECONDS)
+        try:
+            task_result = await client.get_task(task_id)
+        except CodexCliApiError:
+            return None
+
+        task = task_result.get("task") or {}
+        status = task.get("status")
+        if status in ("queued", "running"):
+            continue
+
+        summary = str(task.get("summary") or "").strip()
+        question = str(task.get("question") or "").strip()
+        details = str(task.get("details") or "").strip()
+
+        if status == "waiting_for_input":
+            return question or summary or "Codex needs more information before it can continue."
+
+        if status == "completed":
+            return _format_inline_task_response(summary, details)
+
+        if status == "failed":
+            return _format_inline_task_response(
+                summary or "Codex could not complete that request.",
+                details,
+            )
+
+        return _format_inline_task_response(summary, details)
+
+    return None
+
+
+def _format_inline_task_response(summary: str, details: str) -> str:
+    """Format a completed task for an Assist response."""
+    if not details:
+        return summary or "Codex finished."
+
+    if summary and details.startswith(summary):
+        return details
+
+    if len(details) <= 900:
+        if summary:
+            return f"{summary}\n\n{details}"
+        return details
+
+    return summary or details[:900]
